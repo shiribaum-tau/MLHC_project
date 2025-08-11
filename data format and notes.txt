@@ -1,0 +1,34 @@
+{
+	id: 1234,
+	sex
+	dob: 
+	dod
+	end of data
+	data: [
+		{
+		type: DIAG
+		value: A23
+		date 
+		},
+		{
+		type: CALCIUM
+		value: 27
+		date
+		}
+	]
+}
+
+Decide:
+* Should `data` be sorted
+
+
+Read about:
+* Positional encoding for type
+* Heirarcichal positional encoding
+
+Exclusion Criteria:
+* People with past/current diagnoses of TARGET
+* People pregnant at time of attendance
+* 40 < age < 80
+* 
+
