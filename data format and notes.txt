@@ -1,21 +1,22 @@
-{
-	id: 1234,
-	sex
-	dob: 
-	dod
-	end of data
-	data: [
-		{
-		type: DIAG
-		value: A23
-		date 
-		},
-		{
-		type: CALCIUM
-		value: 27
-		date
-		}
-	]
+{'1234': {
+		"sex": "F"
+		"date_of_attendance": "1900-01-01",
+		"age_when_attended": "1900-01-01",
+		"date_of_death": "1900-01-01",
+		"end_of_data": "1900-01-01",
+		"events": [
+			{
+			"type": "DIAG"
+			"value": "A23"
+			"date": "1900-01-01",
+			},
+			{
+			"type": "CALCIUM"
+			"value": "27"
+			"date": "1900-01-01",
+			}
+		]
+	}
 }
 
 Decide:
