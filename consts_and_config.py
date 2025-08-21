@@ -5,6 +5,8 @@ from typing import Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
+import torch
+
 UNK_TOKEN = '<UNK>'
 PAD_TOKEN = '<PAD>'
 DATE_FORMAT = "%Y-%m-%d"
@@ -20,10 +22,13 @@ class GROUP_SPLITS(Enum):
     TEST="test"
     ALL="all"
 
-@dataclass(frozen=True)
+@dataclass()
 class Config:
     vocab: dict
+    device_name: str = "cpu"
     random_seed: int = 42
+    out_dir: str = "out"
+    log_dir: str = "log"
     start_at_attendance: bool = True # Always include the attendance date in the trajectory
 
     target_tokens: tuple = ("C25",)
@@ -43,12 +48,23 @@ class Config:
     pool_name: str = 'GlobalAvgPool'
     num_layers: int = 1
     num_workers: int = 8 # for data loader
+    learning_rate: float = 0.001
+    num_epochs: int = 20
+
+    # Run objects
+    device: torch.device = None
+    resume_epoch: int = 0
+    train_batch_size: int = 64
+    eval_batch_size: int = 16
+    n_batches: int = 1000 #10000
+    n_batches_per_eval: int = 3
 
 
     def dict(self):
-        excluded_keys = ['vocab']
+        excluded_keys = ['vocab', 'device']
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
+
         return ret
 
     def __repr__(self):

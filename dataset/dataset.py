@@ -2,6 +2,7 @@ from torch.utils import data
 from collections import Counter
 import numpy as np
 import random
+import torch
 
 from consts_and_config import Config, GROUP_SPLITS, PAD_TOKEN, UNK_TOKEN
 from dataset.data_utils import get_avai_trajectory_indices, get_outcome_date, pad_arr, parse_date, process_events
@@ -99,10 +100,10 @@ class DiseaseProgressionDataset(data.Dataset):
                 'x': pad_arr(x, self.config.pad_size, 0),
                 'time_seq': pad_arr(time_seq, self.config.pad_size, np.zeros(self.config.time_embed_dim)),
                 'age_seq': pad_arr(age_seq, self.config.pad_size, np.zeros(self.config.time_embed_dim)),
-                'code_str': code_str
+                # 'code_str': code_str
             }
-            for key in ['y', 'y_seq', 'y_mask', 'time_at_event', 'admit_date', 'age', 'future_cancer',
-                        'days_to_censor', 'patient_id']:
+            for key in ['y', 'y_seq', 'y_mask', 'time_at_event', 'age', 'future_cancer',
+                        'days_to_censor']: #'diag_date', , 'patient_id'
                 item[key] = sample[key]
             items.append(item)
         return items
@@ -124,7 +125,7 @@ class DiseaseProgressionDataset(data.Dataset):
             events_to_date = patient['events'][:idx + 1]
 
             codes = [e['codes'] for e in events_to_date]
-            _, time_seq = self.get_time_seq(events_to_date, events_to_date[-1]['admit_date'])
+            _, time_seq = self.get_time_seq(events_to_date, events_to_date[-1]['diag_date'])
             age, age_seq = self.get_time_seq(events_to_date, patient['dob'])
             y, y_seq, y_mask, time_at_event, days_to_censor = self.get_label(patient, until_idx=idx)
             samples.append({
@@ -134,12 +135,12 @@ class DiseaseProgressionDataset(data.Dataset):
                 'y_mask': y_mask,
                 'time_at_event': time_at_event,
                 'future_cancer': patient['future_cancer'],
-                'patient_id': patient['patient_id'],
+                # 'patient_id': patient['patient_id'],
                 'days_to_censor': days_to_censor,
                 'time_seq': time_seq,
                 'age_seq': age_seq,
-                'age': age,
-                'admit_date': events_to_date[-1]['admit_date'].isoformat()
+                'age': age
+                # 'diag_date': events_to_date[-1]['diag_date'].isoformat()
             })
         return samples
 
@@ -147,7 +148,7 @@ class DiseaseProgressionDataset(data.Dataset):
         """
             Calculates the positional embeddings depending on the time diff from the events and the reference date.
         """
-        deltas = np.array([abs((reference_date - event['admit_date']).days) for event in events])
+        deltas = np.array([abs((reference_date - event['diag_date']).days) for event in events])
         multipliers = 2*np.pi / (np.linspace(
             start=MIN_TIME_EMBED_PERIOD_IN_DAYS, stop=MAX_TIME_EMBED_PERIOD_IN_DAYS, num=self.config.time_embed_dim
         ))
@@ -183,7 +184,7 @@ class DiseaseProgressionDataset(data.Dataset):
                     y_mask: [1, 1, 1, 1, 0]
         """
         event = patient['events'][until_idx]
-        days_to_censor = (patient['outcome_date'] - event['admit_date']).days
+        days_to_censor = (patient['outcome_date'] - event['diag_date']).days
         num_time_steps, max_time = len(self.config.month_endpoints), max(self.config.month_endpoints)
         y = days_to_censor < (max_time*30) and patient['future_cancer']
         y_seq = np.zeros(num_time_steps)

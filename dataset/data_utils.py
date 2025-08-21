@@ -1,7 +1,48 @@
 from datetime import datetime
 
 import numpy as np
-from consts_and_config import DATE_FORMAT, END_OF_TIME, PAD_TOKEN, Config
+import torch
+from consts_and_config import DATE_FORMAT, END_OF_TIME, GROUP_SPLITS, PAD_TOKEN, Config
+
+
+def concat_collate(batch):
+    concat_batch = []
+    for sample in batch:
+        concat_batch.extend(sample)
+    return torch.utils.data.dataloader.default_collate(concat_batch)
+
+def get_dataset_loader(config, data):
+    """
+    Create a DataLoader for the given dataset.
+    Train/Dev/Attribution sets use weighted sampling for balance. Test set uses regular sampling.
+    """
+    # Determine batch size
+    batch_size = config.train_batch_size if data.split_group == GROUP_SPLITS.TRAIN else config.eval_batch_size
+    
+    # Common DataLoader arguments
+    common_args = {
+        'batch_size': batch_size,
+        'num_workers': config.num_workers,
+        'pin_memory': True,
+        'collate_fn': concat_collate
+    }
+    
+    # Use weighted sampling for balanced training/validation sets
+    if data.split_group != GROUP_SPLITS.TEST:
+        sampler = torch.utils.data.sampler.WeightedRandomSampler(
+            weights=data.weights,
+            num_samples=len(data),
+            replacement=(data.split_group == GROUP_SPLITS.TRAIN)
+        )
+        return torch.utils.data.DataLoader(data, sampler=sampler, **common_args)
+    
+    # Use regular sampling for test set
+    return torch.utils.data.DataLoader(
+        data, 
+        shuffle=True, 
+        drop_last=False, 
+        **common_args
+    )
 
 
 def parse_date(date_str, format=DATE_FORMAT):
@@ -33,7 +74,7 @@ def is_valid_trajectory(events_to_date, outcome_date, future_cancer, config: Con
     if not enough_events_counted:
         return False, y
 
-    last_event_admission_date = events_to_date[-1]['admit_date']
+    last_event_admission_date = events_to_date[-1]['diag_date']
     months_to_outcome = (outcome_date - last_event_admission_date).days // 30
     last_endpoint = max(config.month_endpoints)
 
@@ -72,7 +113,7 @@ def get_avai_trajectory_indices(patient, events, config: Config):
     valid_indices = []
     y = False
     if config.start_at_attendance:
-        prefix_end = next((i for i, e in enumerate(events) if e["admit_date"] >= patient['attendance_date']), None)
+        prefix_end = next((i for i, e in enumerate(events) if e["diag_date"] >= patient['attendance_date']), None)
         if prefix_end is None: # attendance_date is after all events
             prefix_end = len(events)
     else:
@@ -95,9 +136,9 @@ def process_events(events, config: Config):
     Also sorts the events.
     """
     for event in events:
-        event['admit_date'] = parse_date(event['diagdate'])
+        event['diag_date'] = parse_date(event['diagdate'])
 
-    events = sorted(events, key=lambda x: x['admit_date'])
+    events = sorted(events, key=lambda x: x['diag_date'])
 
     if config.risk_factor_tokens is not None:
         for e in events:
@@ -112,7 +153,7 @@ def get_outcome_date(events, config: Config, time_of_death=None):
     occurrence time or the end of trajectory. If multiple cancer events exist, use the first diagnosis date.
 
     config:
-        events: A list of event dicts. Each dict must have a CODE and admit_date.
+        events: A list of event dicts. Each dict must have a CODE and diag_date.
         end_of_date: The date for the death for the patient or the end date for
                         the entire dataset (e.g. the patient is still alive).
 
@@ -127,7 +168,7 @@ def get_outcome_date(events, config: Config, time_of_death=None):
 
     if len(target_events) > 0:
         ever_develops_cancer = True
-        time = min([e['admit_date'] for e in target_events])
+        time = min([e['diag_date'] for e in target_events])
     else:
         ever_develops_cancer = False
         time = parse_date(time_of_death) if time_of_death is not None else END_OF_TIME

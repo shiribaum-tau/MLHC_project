@@ -50,12 +50,12 @@ class AbstractRiskModel(nn.Module):
     #     else:
     #         raise NotImplementedError("Embed type {} not supported".format(embed_type))
             
-    def get_embeddings(self, x, batch=None):
+    def get_embeddings(self, x): #, batch=None):
         token_embed = self.code_embed(x)
         return token_embed
 
     def forward(self, x, batch=None):
-        embed_x = self.get_embeddings(x, batch)
+        embed_x = self.get_embeddings(x) #, batch)
 
         # if self.args.use_time_embed:
         #     time = batch['time_seq'].float()
@@ -65,7 +65,7 @@ class AbstractRiskModel(nn.Module):
         #     age = batch['age_seq'].float()
         #     embed_x = self.condition_on_pos_embed(embed_x, age, 'age')
 
-        seq_hidden = self.encode_trajectory(embed_x, batch)
+        seq_hidden = self.encode_trajectory(embed_x) #, batch)
         seq_hidden = seq_hidden.transpose(1, 2)
         hidden = self.dropout(self.pool(seq_hidden))
         # if self.args.add_age_neuron:

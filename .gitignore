@@ -208,3 +208,5 @@ __marimo__/
 
 
 data/olink_individuals_anonymous.json
+out/
+log/

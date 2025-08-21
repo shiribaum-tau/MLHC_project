@@ -31,36 +31,37 @@ class CumulativeProbabilityLayer(nn.Module):
         cum_prob = torch.sum(masked_hazards, dim=1) + self.base_hazard_fc(x)
         return cum_prob
 
-
-class OneHotLayer(nn.Module):
+class EarlyStopper:
     """
-        One-hot embedding for categorical inputs.
+    Keeps track of a chosen metric in order to early stop during training
     """
-    def __init__(self, num_classes, padding_idx):
-        super(OneHotLayer, self).__init__()
-        self.num_classes = num_classes
-        self.embed = nn.Embedding(num_classes, num_classes, padding_idx=padding_idx)
-        self.embed.weight.data = torch.eye(num_classes)
-        self.embed.weight.requires_grad_(False)
+    def __init__(self, patience=1, min_delta=0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.max_validation_acc = 0
 
-    def forward(self, x):
-        return self.embed(x)
+    def early_stop(self, validation_acc):
+        if validation_acc > self.max_validation_acc:
+            self.max_validation_acc = validation_acc
+            self.counter = 0
+        elif validation_acc < (self.max_validation_acc - self.min_delta):
+            self.counter += 1
+            if self.counter >= self.patience:
+                return True
+        return False
 
+# class OneHotLayer(nn.Module):
+#     """
+#         One-hot embedding for categorical inputs.
+#     """
+#     def __init__(self, num_classes, padding_idx):
+#         super(OneHotLayer, self).__init__()
+#         self.num_classes = num_classes
+#         self.embed = nn.Embedding(num_classes, num_classes, padding_idx=padding_idx)
+#         self.embed.weight.data = torch.eye(num_classes)
+#         self.embed.weight.requires_grad_(False)
 
-class AttributionModel(nn.Module):
-    """
-        Model wrapper for posthoc attribution analyses.
-    """
+#     def forward(self, x):
+#         return self.embed(x)
 
-    def __init__(self, model, args):
-        super().__init__()
-        if isinstance(model, dict):
-            self.model = model[args.model_name]
-        else:
-            self.model = model
-
-    def forward(self, x, age_seq, time_seq, batch):
-        batch['age_seq'] = age_seq
-        batch['time_seq'] = time_seq
-        y = self.model(x, batch=batch)
-        return y
