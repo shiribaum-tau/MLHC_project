@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from consts_and_config import Config
-from models.eval import compute_metrics, mean_dict_values, merge_duplicate_keys_flat
+from models.eval import compute_metrics, mean_dict_values, append_to_dict
 from models.utils import EarlyStopper
 import torch.nn.functional as F
 
@@ -34,7 +34,7 @@ class Model:
     def evaluate(self, dataloader):
         self.network.eval()
         total_loss = []
-        total_metrics = {}
+        results_for_eval = {}
 
         for batch_count, batch in enumerate(dataloader):
             if batch is None:
@@ -50,11 +50,14 @@ class Model:
             logits = self.network(batch['x'], batch)
             loss = self.get_model_loss(logits, batch)
             probs = torch.sigmoid(logits).cpu().data.numpy()
-            metrics = compute_metrics(self.config, probs, batch)
-            total_metrics = merge_duplicate_keys_flat(metrics, total_metrics)
+            batch_results = dict(probs=probs.tolist(),
+                        idx_of_last_y_to_eval=batch['idx_of_last_y_to_eval'].tolist(),
+                        y=batch['y'].tolist())
+            results_for_eval = append_to_dict(results_for_eval, batch_results)
+
             total_loss.append(loss.item())
 
-        return np.mean(total_loss), mean_dict_values(total_metrics)
+        return np.mean(total_loss), compute_metrics(self.config, results_for_eval)
 
 
     def train(self, train_dataloader: torch.utils.data.DataLoader,
@@ -78,7 +81,8 @@ class Model:
 
             for epoch_id in range(self.config.resume_epoch, self.config.resume_epoch + self.config.num_epochs, 1):
                 loss_monitor = []
-                metric_monitor = {}
+                results_for_eval = {}
+                # metric_monitor = {}
 
                 if stop_run:
                     break
@@ -103,9 +107,11 @@ class Model:
                     loss = self.get_model_loss(logits, batch)
 
                     probs = torch.sigmoid(logits).cpu().data.numpy()
-                    metrics = compute_metrics(self.config, probs, batch)
+                    batch_results = dict(probs=probs.tolist(),
+                             idx_of_last_y_to_eval=batch['idx_of_last_y_to_eval'].tolist(),
+                             y=batch['y'].tolist())
+                    results_for_eval = append_to_dict(results_for_eval, batch_results)
                     loss_monitor.append(loss.cpu().data.item())
-                    metric_monitor = merge_duplicate_keys_flat(metrics, metric_monitor)
 
                     loss.backward()
                     self.optimizer.step()
@@ -116,15 +122,10 @@ class Model:
                         # calculate step for Tensorboard Summary Writer
                         global_step = (epoch_id * num_batches_per_epoch + batch_count + 1) // self.config.n_batches_per_eval
                         global_step_monitor = global_step
-                        
-                        mean_dict = mean_dict_values(metric_monitor)
 
                         tb_writer.add_scalar(tag="Train_Loss", scalar_value=np.mean(loss_monitor), global_step=global_step)
-                        for key,val in mean_dict.items():
-                            tb_writer.add_scalar(tag=f"Train_{key}", scalar_value=val, global_step=global_step)
 
                         loss_monitor = []
-                        metric_monitor = {}
 
                         # -------------------------
                         # Validation
@@ -142,6 +143,9 @@ class Model:
                                 print('Early stopping')
                                 stop_run = True
 
+                metrics = compute_metrics(self.config, results_for_eval)
+                for key,val in metrics.items():
+                    tb_writer.add_scalar(tag=f"Train_{key}", scalar_value=val, global_step=global_step_monitor)
                 # save model
                 checkpoint = {
                     "network": self.network,

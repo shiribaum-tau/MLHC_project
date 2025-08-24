@@ -5,14 +5,12 @@ import sklearn
 from dataclasses import dataclass, asdict
 
 
-def merge_duplicate_keys_flat(dict1, dict2):
+def append_to_dict(origin_dict, to_append):
     result = {}
-    for key in dict1.keys() | dict2.keys():
-        values = [
-            *([dict1[key]] if key in dict1 and not isinstance(dict1[key], list) else dict1.get(key, [])),
-            *([dict2[key]] if key in dict2 and not isinstance(dict2[key], list) else dict2.get(key, []))
-        ]
-        result[key] = values if len(values) > 1 else values[0]
+    for key in origin_dict.keys() | to_append.keys():
+        original_value = origin_dict.get(key, [])
+        to_append_value = to_append.get(key, [])
+        result[key] = original_value + to_append_value
     return result
 
 def mean_dict_values(data):
@@ -21,15 +19,9 @@ def mean_dict_values(data):
         for k, v in data.items()
     }
 
-def get_probs_and_label(probs, idx_of_last_y_to_eval, y, batch, index=4):
+def get_probs_and_label(probs, idx_of_last_y_to_eval, y, index=4):
     probs_for_eval, labels_for_eval = [], []
-    for patient_index, (prob_arr, first_positive_y, y_true) in enumerate(zip(probs, idx_of_last_y_to_eval, y)):
-
-        # Check if there are any positive patients with y_seq=0
-        if y_true and not any(batch['y_seq'][patient_index]):
-            with open('debug.txt', 'a') as f:
-                f.write(f"Patient ID: {batch['patient_id'][patient_index]}, Y True: {y_true}, Seq: {batch['y_seq'][patient_index].numpy()} Trajectory: {batch['x'][patient_index].numpy()}\n")
-
+    for prob_arr, first_positive_y, y_true in zip(probs, idx_of_last_y_to_eval, y):
         valid_pos = y_true and first_positive_y <= index
         valid_neg = first_positive_y >= index
         label = valid_pos
@@ -40,11 +32,11 @@ def get_probs_and_label(probs, idx_of_last_y_to_eval, y, batch, index=4):
     return probs_for_eval, labels_for_eval
 
 
-def compute_metrics(config, probs, batch):
+def compute_metrics(config, results):
     metrics = {}
     for endpoint_idx, endpoint in enumerate(config.month_endpoints):
 
-        probs_for_eval, labels_for_eval = get_probs_and_label(probs, batch['idx_of_last_y_to_eval'], batch["y"], batch, index=endpoint_idx)
+        probs_for_eval, labels_for_eval = get_probs_and_label(results['probs'], results['idx_of_last_y_to_eval'], results["y"], index=endpoint_idx)
 
         # fpr, tpr, _ = sklearn.metrics.roc_curve(labels_for_eval, probs_for_eval, pos_label=1)
         # import ipdb;ipdb.set_trace()

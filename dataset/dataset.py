@@ -94,6 +94,12 @@ class DiseaseProgressionDataset(data.Dataset):
         for sample in samples:
             code_str = " ".join(sample['codes'])
             x = [self.get_index_for_code(code) for code in sample['codes']]
+
+            # Check if there are any positive patients with y_seq=0
+            if sample['y'] and not any(sample['y_seq']):
+                with open('debug.txt', 'a') as f:
+                    f.write(f"Run name: {self.config.run_name} Patient ID: {sample['patient_id']}, Y True: {sample['y']}, Seq: {sample['y_seq']} Trajectory: {x}\n")
+
             time_seq = sample['time_seq'].tolist()
             age_seq = sample['age_seq'].tolist()
             item = {
