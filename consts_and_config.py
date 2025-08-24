@@ -18,7 +18,7 @@ ROOT_DIR = Path(".")
 
 class GROUP_SPLITS(Enum):
     TRAIN="train"
-    VALIDATION="dev"
+    VALIDATION="val"
     TEST="test"
     ALL="all"
 
