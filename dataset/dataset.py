@@ -102,8 +102,8 @@ class DiseaseProgressionDataset(data.Dataset):
                 'age_seq': pad_arr(age_seq, self.config.pad_size, np.zeros(self.config.time_embed_dim)),
                 # 'code_str': code_str
             }
-            for key in ['y', 'y_seq', 'y_mask', 'time_at_event', 'age', 'future_cancer',
-                        'days_to_censor']: #'diag_date', , 'patient_id'
+            for key in ['y', 'y_seq', 'y_mask', 'idx_of_last_y_to_eval', 'age', 'future_cancer',
+                        'days_to_censor', 'patient_id']: #'diag_date', , 'patient_id'
                 item[key] = sample[key]
             items.append(item)
         return items
@@ -127,15 +127,15 @@ class DiseaseProgressionDataset(data.Dataset):
             codes = [e['codes'] for e in events_to_date]
             _, time_seq = self.get_time_seq(events_to_date, events_to_date[-1]['diag_date'])
             age, age_seq = self.get_time_seq(events_to_date, patient['dob'])
-            y, y_seq, y_mask, time_at_event, days_to_censor = self.get_label(patient, until_idx=idx)
+            y, y_seq, y_mask, idx_of_last_y_to_eval, days_to_censor = self.get_label(patient, until_idx=idx)
             samples.append({
                 'codes': codes,
                 'y': y,
                 'y_seq': y_seq,
                 'y_mask': y_mask,
-                'time_at_event': time_at_event,
+                'idx_of_last_y_to_eval': idx_of_last_y_to_eval,
                 'future_cancer': patient['future_cancer'],
-                # 'patient_id': patient['patient_id'],
+                'patient_id': patient['patient_id'],
                 'days_to_censor': days_to_censor,
                 'time_seq': time_seq,
                 'age_seq': age_seq,
@@ -165,38 +165,40 @@ class DiseaseProgressionDataset(data.Dataset):
         Returns:
             outcome_date: date of pancreatic cancer diagnosis for cases (cancer patients) or
                           END_OF_TIME_DATE for controls (normal patients)
-            time_at_event: the position in time vector (default: [3,6,12,36,60]) which specify the outcome_date
+            idx_of_last_y_to_eval: the position in time vector (default: [3,6,12,36,60]) which specify the outcome_date
             y_seq: Used as golds in cumulative_probability_layer
-                   An all zero array unless ever_develops_panc_cancer then y_seq[time_at_event:]=1
+                   An all zero array unless ever_develops_panc_cancer then y_seq[idx_of_last_y_to_eval:]=1
             y_mask: how many years left in the disease window
-                    ([1] for 0:time_at_event years and [0] for the rest)
+                    ([1] for 0:idx_of_last_y_to_eval years and [0] for the rest)
                     (without linear interpolation, y_mask looks like complement of y_seq)
 
             Ex1:  A partial disease trajectory that includes pancreatic cancer diagnosis between 6-12 months
                   after time of assessment.
-                    time_at_event: 2
+                    idx_of_last_y_to_eval: 2
                     y_seq: [0, 0, 1, 1, 1]
                     y_mask: [1, 1, 1, 0, 0]
             Ex2:  A partial disease trajectory from a patient who never gets pancreatic cancer diagnosis
                   but died between 36-60 months after time of assessment.
-                    time_at_event: 1
+                    idx_of_last_y_to_eval: 1
                     y_seq: [0, 0, 0, 0, 0]
                     y_mask: [1, 1, 1, 1, 0]
         """
-        event = patient['events'][until_idx]
-        days_to_censor = (patient['outcome_date'] - event['diag_date']).days
+        last_event = patient['events'][until_idx]
+        days_to_censor = (patient['outcome_date'] - last_event['diag_date']).days
         num_time_steps, max_time = len(self.config.month_endpoints), max(self.config.month_endpoints)
-        y = days_to_censor < (max_time*30) and patient['future_cancer']
+        # Does the patient become positive within the timeframe
+        y = days_to_censor < (max_time * 30) and patient['future_cancer']
         y_seq = np.zeros(num_time_steps)
         if days_to_censor < (max_time * 30):
-            time_at_event = min([i for i, mo in enumerate(self.config.month_endpoints) if days_to_censor < (mo*30)])
+            # if cancer within timeframe, find the first y index that should be 1
+            idx_of_last_y_to_evaluate = min([i for i, mo in enumerate(self.config.month_endpoints) if days_to_censor < (mo*30)])
         else:
-            time_at_event = num_time_steps - 1
+            idx_of_last_y_to_evaluate = num_time_steps - 1
 
         if y:
-            y_seq[time_at_event:] = 1
-        y_mask = np.array([1] * (time_at_event+1) + [0] * (num_time_steps - (time_at_event+1)))
+            y_seq[idx_of_last_y_to_evaluate:] = 1
+        y_mask = np.array([1] * (idx_of_last_y_to_evaluate+1) + [0] * (num_time_steps - (idx_of_last_y_to_evaluate+1)))
 
-        assert time_at_event >= 0 and len(y_seq) == len(y_mask)
-        return y, y_seq.astype('float64'), y_mask.astype('float64'), time_at_event, days_to_censor
+        assert idx_of_last_y_to_evaluate >= 0 and len(y_seq) == len(y_mask)
+        return y, y_seq.astype('float64'), y_mask.astype('float64'), idx_of_last_y_to_evaluate, days_to_censor
 

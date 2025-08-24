@@ -1,6 +1,4 @@
 Todo:
-* Command line interface
-
 * Metrics:
     * AUC
     * AUPR
@@ -25,3 +23,6 @@ Todo:
     * our changes
     * results
     * discussion/limitations
+
+    * the loss is masked such that only the first instance of cancer affects the loss.
+        It *is* calculated as part of the AUC, etc.

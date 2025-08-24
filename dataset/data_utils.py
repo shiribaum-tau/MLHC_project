@@ -80,6 +80,7 @@ def is_valid_trajectory(events_to_date, outcome_date, future_cancer, config: Con
 
     if future_cancer and (months_to_outcome <= config.exclusion_interval_mnths):
         # Exclusion interval for positives
+        # Note: Positive patients where the cancer happened before the last event are filtered here.
         return False, y
 
     # Filter (2-3)
@@ -88,7 +89,6 @@ def is_valid_trajectory(events_to_date, outcome_date, future_cancer, config: Con
     is_valid_pos = future_cancer and is_pos_pre_cancer and is_pos_in_time_horizon
 
     # Filter (4)
-    # This used to compare to config.min_followup_for_ctrls_yrs
     is_valid_neg = (not future_cancer) and (months_to_outcome > config.min_followup_for_ctrls_mnths)
     
     y = ((months_to_outcome < last_endpoint) and future_cancer)

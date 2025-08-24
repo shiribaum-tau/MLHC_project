@@ -30,8 +30,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Data directory (default: data)')
     parser.add_argument('--dataset-name', type=str, required=True,
                         help='Dataset name (required)')
-    parser.add_argument('--start-at-attendance', action='store_true', default=True,
-                        help='Always include the attendance date in the trajectory (default: True)')
+    parser.add_argument('--start-at-attendance', action='store_true', default=False,
+                        help='Always include the attendance date in the trajectory (default: False)')
     parser.add_argument('--no-start-at-attendance', dest='start_at_attendance', action='store_false',
                         help='Do not include the attendance date in the trajectory')
     

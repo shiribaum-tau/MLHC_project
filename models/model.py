@@ -9,6 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from consts_and_config import Config
+from models.eval import compute_metrics, mean_dict_values, merge_duplicate_keys_flat
 from models.utils import EarlyStopper
 import torch.nn.functional as F
 
@@ -32,7 +33,8 @@ class Model:
 
     def evaluate(self, dataloader):
         self.network.eval()
-        total_loss = 0
+        total_loss = []
+        total_metrics = {}
 
         for batch_count, batch in enumerate(dataloader):
             if batch is None:
@@ -40,15 +42,19 @@ class Model:
                 continue
 
             for key in batch.keys():
+                if key == 'patient_id':
+                    continue
                 batch[key] = batch[key].to(self.config.device)
             
             # FORWARD
             logits = self.network(batch['x'], batch)
             loss = self.get_model_loss(logits, batch)
             probs = torch.sigmoid(logits).cpu().data.numpy()
-            total_loss += loss.item()
+            metrics = compute_metrics(self.config, probs, batch)
+            total_metrics = merge_duplicate_keys_flat(metrics, total_metrics)
+            total_loss.append(loss.item())
 
-        return total_loss / len(dataloader)
+        return np.mean(total_loss), mean_dict_values(total_metrics)
 
 
     def train(self, train_dataloader: torch.utils.data.DataLoader,
@@ -63,8 +69,6 @@ class Model:
         )
 
         try:
-            loss_val = 0
-            acc_val = 0
             stop_run = False
             early_stopper = EarlyStopper(patience=20, min_delta=10)
 
@@ -73,8 +77,8 @@ class Model:
             num_batches_per_epoch = min(len(train_dataloader), (self.config.n_batches))
 
             for epoch_id in range(self.config.resume_epoch, self.config.resume_epoch + self.config.num_epochs, 1):
-                loss_monitor = 0.
-                acc_monitor = 0.
+                loss_monitor = []
+                metric_monitor = {}
 
                 if stop_run:
                     break
@@ -90,19 +94,18 @@ class Model:
                     
 
                     for key in batch.keys():
-                        try:
-                            batch[key] = batch[key].to(self.config.device)
-                        except:
-                            print(key)
-                            import ipdb;ipdb.set_trace()
-                            print(key)
+                        if key == 'patient_id':
+                            continue
+                        batch[key] = batch[key].to(self.config.device)
                     
                     # FORWARD
                     logits = self.network(batch['x'], batch)
                     loss = self.get_model_loss(logits, batch)
 
                     probs = torch.sigmoid(logits).cpu().data.numpy()
-                    loss_monitor += loss.cpu().data.item()
+                    metrics = compute_metrics(self.config, probs, batch)
+                    loss_monitor.append(loss.cpu().data.item())
+                    metric_monitor = merge_duplicate_keys_flat(metrics, metric_monitor)
 
                     loss.backward()
                     self.optimizer.step()
@@ -110,26 +113,28 @@ class Model:
 
                     # monitoring
                     if (batch_count + 1) % self.config.n_batches_per_eval == 0:
-                        loss_monitor = loss_monitor / self.config.n_batches_per_eval
-                        # acc_monitor_q = acc_monitor_q / self.config.n_batches_per_eval
-
-
                         # calculate step for Tensorboard Summary Writer
                         global_step = (epoch_id * num_batches_per_epoch + batch_count + 1) // self.config.n_batches_per_eval
                         global_step_monitor = global_step
+                        
+                        mean_dict = mean_dict_values(metric_monitor)
 
-                        tb_writer.add_scalar(tag="Train_Loss", scalar_value=loss_monitor, global_step=global_step)
-                        # tb_writer.add_scalar(tag="Train_Query_Accuracy", scalar_value=acc_monitor_q, global_step=global_step)
+                        tb_writer.add_scalar(tag="Train_Loss", scalar_value=np.mean(loss_monitor), global_step=global_step)
+                        for key,val in mean_dict.items():
+                            tb_writer.add_scalar(tag=f"Train_{key}", scalar_value=val, global_step=global_step)
 
-                        loss_monitor = 0.
+                        loss_monitor = []
+                        metric_monitor = {}
 
                         # -------------------------
                         # Validation
                         # -------------------------
                         if val_dataloader is not None:
-                            loss_val = self.evaluate(val_dataloader)
+                            loss_val, metrics_val = self.evaluate(val_dataloader)
 
                             tb_writer.add_scalar(tag="Val_loss", scalar_value=loss_val, global_step=global_step)
+                            for key, val in metrics_val.items():
+                                tb_writer.add_scalar(tag=f"Val_{key}", scalar_value=val, global_step=global_step)
 
                             self.network.train()
 
@@ -150,5 +155,3 @@ class Model:
         finally:
             print('\nClose tensorboard summary writer')
             tb_writer.close()
-
-        return loss_val #, acc_val, pd.DataFrame(task_specific_metrics_train), pd.DataFrame(task_specific_metrics_val)

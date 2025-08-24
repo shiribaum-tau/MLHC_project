@@ -68,9 +68,9 @@ class Config:
     n_batches_per_eval: int
     
     # Fields with defaults
-    target_tokens: tuple = ("C25",)
+    target_tokens: tuple = ("642",) # ("C25",)
     risk_factor_tokens: tuple = None
-    month_endpoints: tuple = (3, 6, 12, 36)
+    month_endpoints: tuple = (3, 6, 12, 36, 60)
 
 
     def dict(self):

@@ -211,3 +211,4 @@ data/olink_individuals_anonymous.json
 out/
 log/
 logs/
+data/*.json
