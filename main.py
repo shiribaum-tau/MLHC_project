@@ -26,8 +26,7 @@ if __name__ == "__main__":
 
     data, config = get_data_and_config_from_cmdline()
 
-    print(f"Starting run {config.run_name}")
-    
+    print(f"Starting run with config {config}")
 
     os.makedirs(config.log_dir / config.run_name, exist_ok=True)
     os.makedirs(config.out_dir, exist_ok=True)
@@ -36,19 +35,19 @@ if __name__ == "__main__":
         json.dump(config.dict(), f)
 
     # Create Datasets
-    train = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TRAIN)
-    test = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
-    val = DiseaseProgressionDataset(data, config, GROUP_SPLITS.VALIDATION)
-    print(f"Number of patient for -Train:{len(train)}, -Dev:{len(val)}, -Test:{len(test)}")
+    train_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TRAIN)
+    test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
+    val_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.VALIDATION)
+    print(f"Number of patient for -Train:{len(train_dataset)}, -Dev:{len(val_dataset)}, -Test:{len(test_dataset)}")
 
     # Set Random Seed
     random.seed(config.random_seed)
     np.random.seed(config.random_seed)
     torch.manual_seed(config.random_seed)
 
-    train_dataloader = get_dataset_loader(config, train)
-    val_dataloader = get_dataset_loader(config, val)
-    test_dataloader = get_dataset_loader(config, test)
+    train_dataloader = get_dataset_loader(config, train_dataset)
+    val_dataloader = get_dataset_loader(config, val_dataset)
+    test_dataloader = get_dataset_loader(config, test_dataset)
 
     # Create model
     network = MLP(config)
