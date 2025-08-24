@@ -1,4 +1,6 @@
 Todo:
+* Command line interface
+
 * Metrics:
     * AUC
     * AUPR
@@ -15,7 +17,6 @@ Todo:
     * Inclusion/Exclusion criteria (w/ men?, blood tests for pregnant people/people with cancer?)
     * Diseases to exclude?
     * 250k people
-
 
 * Write:
     * Intro

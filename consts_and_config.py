@@ -1,6 +1,7 @@
 import datetime
 import os
 from enum import Enum, auto
+import pathlib
 from typing import Union
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -14,7 +15,6 @@ END_OF_TIME = datetime.datetime.max
 
 ROOT_DIR = Path(".")
 
-DATA_DIR = ROOT_DIR / "data"
 
 class GROUP_SPLITS(Enum):
     TRAIN="train"
@@ -24,46 +24,62 @@ class GROUP_SPLITS(Enum):
 
 @dataclass()
 class Config:
+    # Required fields (no defaults) - grouped by category
+    
+    # Core required fields
     vocab: dict
-    device_name: str = "cpu"
-    random_seed: int = 42
-    out_dir: str = "out"
-    log_dir: str = "log"
-    start_at_attendance: bool = True # Always include the attendance date in the trajectory
-
+    dataset_name: str
+    data_dir: pathlib.Path
+    
+    # Device and basic configuration
+    run_name: str
+    device_name: str
+    device: torch.device
+    random_seed: int
+    out_dir: pathlib.Path
+    log_dir: pathlib.Path
+    
+    # Data preprocessing configuration
+    start_at_attendance: bool
+    min_trajectory_length: int
+    min_followup_for_ctrls_mnths: int
+    exclusion_interval_mnths: int
+    max_events_length: int
+    pad_size: int
+    
+    # Model architecture
+    hidden_dim: int
+    time_embed_dim: int
+    num_layers: int
+    dropout: float
+    pool_name: str
+    
+    # Training configuration
+    learning_rate: float
+    num_epochs: int
+    train_batch_size: int
+    eval_batch_size: int
+    num_workers: int
+    resume_epoch: int
+    
+    # Evaluation configuration
+    n_trajectories_per_patient_in_test: int
+    n_batches: int
+    n_batches_per_eval: int
+    
+    # Fields with defaults
     target_tokens: tuple = ("C25",)
     risk_factor_tokens: tuple = None
-    min_trajectory_length: int = 5
-    min_followup_for_ctrls_mnths: int = 24
-    exclusion_interval_mnths: int = 0
     month_endpoints: tuple = (3, 6, 12, 36)
-
-    time_embed_dim: int = 128
-    max_events_length: int = None
-    pad_size: int = None
-
-    n_trajectories_per_patient_in_test: int = 250
-    hidden_dim : int = 256
-    dropout: float = 0.2
-    pool_name: str = 'GlobalAvgPool'
-    num_layers: int = 1
-    num_workers: int = 8 # for data loader
-    learning_rate: float = 0.001
-    num_epochs: int = 20
-
-    # Run objects
-    device: torch.device = None
-    resume_epoch: int = 0
-    train_batch_size: int = 64
-    eval_batch_size: int = 16
-    n_batches: int = 1000 #10000
-    n_batches_per_eval: int = 3
 
 
     def dict(self):
         excluded_keys = ['vocab', 'device']
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
+
+        for path_key in ['data_dir', 'log_dir', 'out_dir']:
+            ret[path_key] = str(ret[path_key])
 
         return ret
 

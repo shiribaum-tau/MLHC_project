@@ -19,6 +19,7 @@ class Model:
         self.network = network
         self.optimizer = optimizer
         self.config = config
+        self.log_path = config.log_dir / config.run_name
 
 
     def get_model_loss(self, logits, batch):
@@ -57,7 +58,7 @@ class Model:
         self.network.train()
 
         tb_writer = SummaryWriter(
-            log_dir=self.config.log_dir
+            log_dir=self.log_path
             # purge_step=self.config.resume_epoch * self.config['num_episodes_per_epoch'] // self.config['minibatch_print'] if self.config.resume_epoch > 0 else None
         )
 
@@ -141,7 +142,7 @@ class Model:
                     "network": self.network,
                     "optimizer": self.optimizer.state_dict()
                 }
-                checkpoint_path = os.path.join(self.config.log_dir, 'Epoch_{0:d}_global_step_{1:d}.pt'.format((epoch_id + 1), global_step_monitor))
+                checkpoint_path = os.path.join(self.log_path, 'Epoch_{0:d}_global_step_{1:d}.pt'.format((epoch_id + 1), global_step_monitor))
                 torch.save(obj=checkpoint, f=checkpoint_path)
                 print('State dictionaries are saved into {0:s}\n'.format(checkpoint_path))
 
