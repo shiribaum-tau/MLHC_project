@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import random
 import string
+import datetime
 import torch
 from typing import Optional, Union
 from consts_and_config import GROUP_SPLITS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Config
@@ -68,16 +69,18 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Training batch size (default: 64)')
     parser.add_argument('--eval-batch-size', type=int, default=16,
                         help='Evaluation batch size (default: 16)')
-    parser.add_argument('--num-workers', type=int, default=8,  # was 8
-                        help='Number of workers for data loader (default: 8)')
+    parser.add_argument('--num-workers', type=int, default=0,  # was 8
+                        help='Number of workers for data loader (default: 0)')
     
     # Testing and evaluation configuration
     parser.add_argument('--n-trajectories-per-patient-in-test', type=int, default=10,
                         help='Number of trajectories per patient in test (default: 10)')
     parser.add_argument('--n-batches', type=int, default=1000,
                         help='Number of batches (default: 1000)')
-    parser.add_argument('--n-batches-per-eval', type=int, default=3,
-                        help='Number of batches per evaluation (default: 3)')
+    parser.add_argument('--n-train-batches-per-eval', type=int, default=100,
+                        help='Number of training batches per evaluation (default: 100)')
+    parser.add_argument('--n-batches-for-eval', type=int, default=200,
+                        help='Number of batches from the validation set to use for evaluation (default: 200)')
     parser.add_argument('--resume-epoch', type=int, default=0,
                         help='Resume from epoch (default: 0)')
     
@@ -134,6 +137,8 @@ def get_data_and_config_from_cmdline() -> Config:
     args.device = get_device(args.device_name)
 
     if args.run_name is None:
-        args.run_name = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+
+    args.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     return data, Config(**vars(args))

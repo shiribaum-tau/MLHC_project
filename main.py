@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import pickle
 import random
@@ -19,14 +20,21 @@ from models.mlp import MLP
 from models.model import Model
 # from train_model import train_model
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s [%(levelname).1s] %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
 
 if __name__ == "__main__":
-    print("CUDA:", torch.cuda.is_available())
+    logging.info("CUDA: %s", torch.cuda.is_available())
     results_path = "out"
 
     data, config = get_data_and_config_from_cmdline()
 
-    print(f"Starting run with config {config}")
+    logging.info("Running on device %s", config.device)
+
+    logging.info("Starting run with config %s", config)
 
     os.makedirs(config.log_dir / config.run_name, exist_ok=True)
     os.makedirs(config.out_dir, exist_ok=True)
@@ -38,7 +46,7 @@ if __name__ == "__main__":
     train_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TRAIN)
     test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
     val_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.VALIDATION)
-    print(f"Number of patient for -Train:{len(train_dataset)}, -Dev:{len(val_dataset)}, -Test:{len(test_dataset)}")
+    logging.info("Number of patient for -Train:%d, -Dev:%d, -Test:%d", len(train_dataset), len(val_dataset), len(test_dataset))
 
     # Set Random Seed
     random.seed(config.random_seed)

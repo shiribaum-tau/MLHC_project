@@ -212,3 +212,4 @@ out/
 log/
 logs/
 data/*.json
+job_files/slurm_default/

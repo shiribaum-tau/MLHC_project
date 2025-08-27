@@ -1,9 +1,16 @@
 
 import warnings
 import numpy as np
-import sklearn
+from sklearn.metrics import roc_auc_score, precision_recall_curve, auc
 from dataclasses import dataclass, asdict
+import logging
 
+logger = logging.getLogger("eval")
+logging.getLogger("eval").addHandler(logging.NullHandler())
+
+def write_to_tb(tb_writer, key, val, global_step):
+    if val is not None:
+        tb_writer.add_scalar(tag=key, scalar_value=val, global_step=global_step)
 
 def append_to_dict(origin_dict, to_append):
     result = {}
@@ -41,25 +48,19 @@ def compute_metrics(config, results):
         # fpr, tpr, _ = sklearn.metrics.roc_curve(labels_for_eval, probs_for_eval, pos_label=1)
         # import ipdb;ipdb.set_trace()
         try:
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                auc = sklearn.metrics.roc_auc_score(labels_for_eval, probs_for_eval)
-                if w:
-                    import ipdb; ipdb.set_trace()
-        except Exception:
-            auc = None
+            auc_value = roc_auc_score(labels_for_eval, probs_for_eval)
+        except Exception as e:
+            logger.warning(f"Failed to compute AUC for endpoint {endpoint}: {e}")
+            auc_value = None
 
         try:
-            with warnings.catch_warnings(record=True) as w:
-                warnings.simplefilter("always")
-                precisions, recalls, _ = sklearn.metrics.precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
-                aupr = sklearn.metrics.auc(recalls, precisions)
-                if w:
-                    import ipdb; ipdb.set_trace()
-        except Exception:
+            precisions, recalls, _ = precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
+            aupr = auc(recalls, precisions)
+        except Exception as e:
+            logger.warning(f"Failed to compute AUPR for endpoint {endpoint}: {e}")
             aupr = None
 
-        metrics[f'auc_{endpoint}'] = auc
+        metrics[f'auc_{endpoint}'] = auc_value
         metrics[f'aupr_{endpoint}'] = aupr
 
     # c_index = compute_c_index(probs, censor_times, golds)

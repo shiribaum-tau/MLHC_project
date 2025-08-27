@@ -30,7 +30,7 @@ class Config:
     vocab: dict
     dataset_name: str
     data_dir: pathlib.Path
-    
+
     # Device and basic configuration
     run_name: str
     device_name: str
@@ -38,7 +38,8 @@ class Config:
     random_seed: int
     out_dir: pathlib.Path
     log_dir: pathlib.Path
-    
+    start_time: str
+
     # Data preprocessing configuration
     start_at_attendance: bool
     min_trajectory_length: int
@@ -46,14 +47,14 @@ class Config:
     exclusion_interval_mnths: int
     max_events_length: int
     pad_size: int
-    
+
     # Model architecture
     hidden_dim: int
     time_embed_dim: int
     num_layers: int
     dropout: float
     pool_name: str
-    
+
     # Training configuration
     learning_rate: float
     num_epochs: int
@@ -61,12 +62,13 @@ class Config:
     eval_batch_size: int
     num_workers: int
     resume_epoch: int
-    
+
     # Evaluation configuration
     n_trajectories_per_patient_in_test: int
     n_batches: int
-    n_batches_per_eval: int
-    
+    n_train_batches_per_eval: int
+    n_batches_for_eval: int
+
     # Fields with defaults
     target_tokens: tuple = ("642",) # ("C25",)
     risk_factor_tokens: tuple = None
