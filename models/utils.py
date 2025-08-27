@@ -34,21 +34,40 @@ class EarlyStopper:
     """
     Keeps track of a chosen metric in order to early stop during training
     """
-    def __init__(self, patience=1, min_delta=0):
+    def __init__(self, patience=1, min_delta=0, metric_to_monitor='val_accuracy', mode='max'):
+        """
+        Args:
+            patience (int): Number of epochs with no improvement after which training stops.
+            min_delta (float): Minimum change in monitored value to qualify as an improvement.
+            metric_to_monitor (str): Name of the metric being monitored (for logging only).
+            mode (str): 'min' for minimizing metric, 'max' for maximizing metric.
+        """
         self.patience = patience
         self.min_delta = min_delta
-        self.counter = 0
-        self.max_validation_acc = 0
+        self.metric_to_monitor = metric_to_monitor
+        self.mode = mode
 
-    def early_stop(self, validation_acc):
-        if validation_acc > self.max_validation_acc:
-            self.max_validation_acc = validation_acc
-            self.counter = 0
-        elif validation_acc < (self.max_validation_acc - self.min_delta):
-            self.counter += 1
-            if self.counter >= self.patience:
-                return True
-        return False
+        self.best_value = float('inf') if mode == 'min' else -float('inf')
+        self.counter = 0
+
+    def early_stop(self, curr_metric_value):
+        if self.mode == 'min':
+            if curr_metric_value < self.best_value - self.min_delta:
+                self.best_value = curr_metric_value
+                self.counter = 0
+            else:
+                self.counter += 1
+
+        elif self.mode == 'max':
+            if curr_metric_value > self.best_value + self.min_delta:
+                self.best_value = curr_metric_value
+                self.counter = 0
+            else:
+                self.counter += 1
+        else:
+            raise ValueError("mode must be either 'min' or 'max'")
+
+        return self.counter >= self.patience
 
 # class OneHotLayer(nn.Module):
 #     """

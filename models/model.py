@@ -83,7 +83,7 @@ class Model:
 
         try:
             stop_run = False
-            early_stopper = EarlyStopper(patience=20, min_delta=10)
+            early_stopper = EarlyStopper(patience=5, min_delta=0.0001, metric_to_monitor='val_loss', mode='min')
 
             global_step = 0
 
@@ -153,7 +153,7 @@ class Model:
 
                             self.network.train()
 
-                            if early_stopper.early_stop(loss_val): # TODO
+                            if early_stopper.early_stop(loss_val):
                                 logger.info('Early stopping')
                                 stop_run = True
 
