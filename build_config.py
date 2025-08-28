@@ -25,8 +25,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Random seed (default: 42)')
     parser.add_argument('--out-dir', type=str, default=ROOT_DIR / "out",
                         help='Output directory (default: out)')
-    parser.add_argument('--log-dir', type=str, default=ROOT_DIR / "logs",
-                        help='Log directory (default: log)')
+    parser.add_argument('--base-log-dir', type=str, default=ROOT_DIR / "logs",
+                        help='Base log directory (default: logs)')
     parser.add_argument('--data-dir', type=str, default=ROOT_DIR / "data",
                         help='Data directory (default: data)')
     parser.add_argument('--dataset-name', type=str, required=True,
@@ -120,7 +120,7 @@ def get_data_and_config_from_cmdline() -> Config:
     args = parser.parse_args()
 
     args.data_dir = Path(args.data_dir)
-    args.log_dir = Path(args.log_dir)
+    args.base_log_dir = Path(args.base_log_dir)
     args.out_dir = Path(args.out_dir)
 
     with open(args.data_dir / f"{args.dataset_name}.json") as f:
@@ -137,8 +137,9 @@ def get_data_and_config_from_cmdline() -> Config:
     args.device = get_device(args.device_name)
 
     if args.run_name is None:
-        args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=4))
 
+    args.log_dir = args.base_log_dir / args.run_name
     args.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     return data, Config(**vars(args))

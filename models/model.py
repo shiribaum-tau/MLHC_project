@@ -44,7 +44,7 @@ class Model:
 
         for batch_count, batch in enumerate(dataloader):
             if batch is None:
-                warnings.warn('Empty batch')
+                logger.warning('Empty batch')
                 continue
 
             if n_batches is not None and batch_count >= n_batches:

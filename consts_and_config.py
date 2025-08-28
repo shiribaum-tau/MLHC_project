@@ -37,6 +37,7 @@ class Config:
     device: torch.device
     random_seed: int
     out_dir: pathlib.Path
+    base_log_dir: pathlib.Path
     log_dir: pathlib.Path
     start_time: str
 
@@ -80,7 +81,7 @@ class Config:
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
 
-        for path_key in ['data_dir', 'log_dir', 'out_dir']:
+        for path_key in ['base_log_dir', 'data_dir', 'log_dir', 'out_dir']:
             ret[path_key] = str(ret[path_key])
 
         return ret
