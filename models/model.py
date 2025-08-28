@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from consts_and_config import Config
 from models.eval import compute_metrics, append_to_dict, write_to_tb
-from models.utils import EarlyStopper, ModelCheckpoint
+from models.utils import EarlyStopper, ModelCheckpoint, ReduceLROnPlateau
 
 logger = logging.getLogger("model")
 
@@ -85,13 +85,18 @@ class Model:
 
         try:
             stop_run = False
-            early_stopper = EarlyStopper(patience=10, min_delta=0.0001, metric_to_monitor='val_loss', mode='min')
-            checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
+
+            reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.log_path, device=self.config.device,
+                                          curr_lr=self.config.learning_rate ,metric_to_monitor=f"val_{tuning_metric}", mode="max", lr_decay=self.config.lr_decay,
+                                          patience=5, min_delta=self.config.min_delta_checkpoint)
+            # checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
+            # early_stopper = EarlyStopper(patience=10, min_delta=self.config.min_delta_earlystopping, metric_to_monitor='val_loss', mode='min')
+            # reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.log_path, device=self.config.device,
+            #                               curr_lr=self.config.learning_rate ,metric_to_monitor=f"val_{tuning_metric}", mode="min", lr_decay=0.5,
+            #                               patience=5, min_delta=0.0001)
 
             global_step = 0
-
             num_batches_per_epoch = min(len(train_dataloader), (self.config.n_batches))
-
             logger.info(f"Starting training for {self.config.num_epochs} epochs with {num_batches_per_epoch} batches in each.")
 
             for epoch_id in range(self.config.resume_epoch, self.config.resume_epoch + self.config.num_epochs, 1):
@@ -151,14 +156,12 @@ class Model:
                             loss_val, _ = self.evaluate(val_dataloader, self.config.n_batches_for_eval)
 
                             write_to_tb(tb_writer, "Val_Loss", loss_val, global_step)
-                            # for key, val in metrics_val.items():
-                            #     write_to_tb(tb_writer, f"Val_{key}", val, global_step)
 
                             self.network.train()
 
-                            if early_stopper.early_stop(loss_val):
-                                logger.info('Early stopping')
-                                stop_run = True
+                            # if early_stopper.early_stop(loss_val):
+                            #     logger.info('Early stopping')
+                            #     stop_run = True
 
 
                 global_step += 1
@@ -186,13 +189,24 @@ class Model:
                 torch.save(obj=checkpoint, f=checkpoint_path)
                 logger.info('State dictionaries are saved into {0:s}'.format(checkpoint_path))
 
+
+                # save the best model if improved, if not check patience and reduce lr when necessary
+                # reduce_lr.step(loss_val_full, epoch_id, self.network)
+                lr_monitor = reduce_lr.step(metrics_val_full[tuning_metric], epoch_id, self.network)
+
+                write_to_tb(tb_writer, "lr", lr_monitor, global_step)
+
+                # if early_stopper.early_stop(loss_val_full):
+                #     logger.info('Early stopping')
+                #     stop_run = True
+
                 # save the best checkpoint if improved
-                checkpoint_saver.check_and_save(
-                    metric_value=metrics_val_full[tuning_metric],
-                    model=self.network,
-                    optimizer=self.optimizer,
-                    epoch_id=epoch_id
-                )
+                # checkpoint_saver.check_and_save(
+                #     metric_value=metrics_val_full[tuning_metric],
+                #     model=self.network,
+                #     optimizer=self.optimizer,
+                #     epoch_id=epoch_id
+                # )
 
             logger.info('Training is completed.')
         finally:

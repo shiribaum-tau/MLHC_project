@@ -79,6 +79,9 @@ class Config:
     target_tokens: tuple = ("642",) # ("C25",)
     risk_factor_tokens: tuple = None
     month_endpoints: tuple = (3, 6, 12, 36, 60)
+    min_delta_checkpoint: float = 0.0
+    min_delta_earlystopping: float = 0.0
+    lr_decay: float = 0.5
 
 
     def dict(self):

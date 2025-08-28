@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 import os
 import logging
 
@@ -128,6 +129,97 @@ class ModelCheckpoint:
             torch.save(checkpoint, best_path)
             logger.info(f"Model improved ({self.monitor} = {metric_value:.4f}). Saved to {best_path}")
 
+class ReduceLROnPlateau:
+    """
+    Keeps track of a chosen metric in order to reduce learning rate during training
+    and saves a copy of the model whenever the monitored metric improves
+    """
+    def __init__(self, optimizer, log_path, device, curr_lr, metric_to_monitor="val_loss", mode="min",
+                 lr_decay=0.1, patience=5, min_delta=0.0,
+                 best_model_name="best_model.pt"):
+        """
+        Args:
+            optimizer: torch optimizer
+            log_path: directory to save checkpoints
+            device: device to use
+            curr_lr: current learning rate when initialized
+            metric_to_monitor: metric name to monitor (str) (for logging only)
+            mode: 'min' to minimize the metric, 'max' to maximize.
+            lr_decay: factor to reduce LR by
+            patience: epochs with no improvement before reducing LR
+            min_delta: minimum change in monitored metric to qualify as improvement
+            best_model_name: file name for best model checkpoint
+        """
+        self.optimizer = optimizer
+        self.log_path = log_path
+        self.metric_to_monitor = metric_to_monitor
+        self.mode = mode
+        self.lr_decay = lr_decay
+        self.curr_lr = curr_lr
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_model_path = os.path.join(log_path, best_model_name)
+        self.device = device
+
+        if mode == "min":
+            self.best_value = np.inf
+            self.is_improved = lambda current, best: (best - current) > min_delta
+        elif mode == "max":
+            self.best_value = -np.inf
+            self.is_improved = lambda current, best: (current - best) > min_delta
+        else:
+            raise ValueError("mode must be 'min' or 'max'")
+
+        self.num_bad_epochs = 0
+
+
+    def step(self, current_value, epoch_id, network):
+        """
+        Called at the end of each epoch.
+        """
+
+        if self.is_improved(current_value, self.best_value):
+            # Update best value
+            self.best_value = current_value
+            self.num_bad_epochs = 0
+
+            # Save best model checkpoint
+            checkpoint = {
+                'epoch': epoch_id,
+                'network_state_dict': network.state_dict(),
+                'optimizer_state_dict': self.optimizer.state_dict()
+            }
+            torch.save(checkpoint, self.best_model_path)
+            logger.info(f"Model improved ({self.metric_to_monitor} = {current_value:.4f}) on epoch {epoch_id}. Saved to {self.best_model_path}")
+
+        else:
+            self.num_bad_epochs += 1
+
+            if self.num_bad_epochs >= self.patience:
+                self._restore_best_model(network)
+                self._reduce_lr()
+                self.num_bad_epochs = 0
+
+        return self.curr_lr
+
+
+    def _reduce_lr(self):
+        """ Reduce learning rate by factor """
+        for param_group in self.optimizer.param_groups:
+            old_lr = self.curr_lr
+            new_lr = old_lr * self.lr_decay
+            self.curr_lr = new_lr
+            param_group["lr"] = new_lr
+            logger.info(f"Reducing learning rate from {old_lr} to {new_lr}")
+
+    def _restore_best_model(self, network):
+        """Reload best model checkpoint into the network + optimizer."""
+        if os.path.exists(self.best_model_path):
+            checkpoint = torch.load(self.best_model_path,
+                                    map_location=lambda storage, loc: storage.cuda(self.device.index) if self.device.type == 'cuda' else storage)
+            network.load_state_dict(checkpoint["network_state_dict"])
+            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            logger.info(f"Restored best model from {self.best_model_path}")
 
 # class OneHotLayer(nn.Module):
 #     """
