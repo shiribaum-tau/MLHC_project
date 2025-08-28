@@ -17,8 +17,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Healthcare ML Configuration Parser')
 
     # What main steps to execute
-    parser.add_argument('--train', action='store_true', default=False, help='Whether or not to train model')
-    parser.add_argument('--val', action='store_true', default=False, help='Whether or not to run model on val set')
+    parser.add_argument('--train', action='store_true', default=True, help='Whether or not to train model')
+    parser.add_argument('--val', action='store_true', default=True, help='Whether or not to run model on val set')
     parser.add_argument('--test', action='store_true', default=False, help='Whether or not to run model on test set')
 
     # Device and basic configuration
@@ -42,7 +42,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Always include the attendance date in the trajectory (default: False)')
     parser.add_argument('--no-start-at-attendance', dest='start_at_attendance', action='store_false',
                         help='Do not include the attendance date in the trajectory')
-    
+    parser.add_argument('--target-token', type=str, default='642',
+                    help='Target token for prediction (default: "642")')
     # Data configuration
     parser.add_argument('--min-trajectory-length', type=int, default=5,
                         help='Minimum trajectory length (default: 5)')
@@ -125,6 +126,10 @@ def get_data_and_config_from_cmdline() -> Config:
     """Main function to parse command line arguments and return a Config object."""
     parser = create_argument_parser()
     args = parser.parse_args()
+
+    # Require model-to-load if train is False
+    if not args.train and not args.model_to_load:
+        parser.error("If --train is False, --model-to-load must be specified.")
 
     args.data_dir = Path(args.data_dir)
     args.base_log_dir = Path(args.base_log_dir)

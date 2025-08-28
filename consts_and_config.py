@@ -76,8 +76,9 @@ class Config:
     n_train_batches_per_eval: int
     n_batches_for_eval: int
 
+    target_token: str # ("C25",)
+
     # Fields with defaults
-    target_tokens: tuple = ("642",) # ("C25",)
     risk_factor_tokens: tuple = None
     month_endpoints: tuple = (3, 6, 12, 36, 60)
 

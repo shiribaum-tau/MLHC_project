@@ -142,7 +142,7 @@ def process_events(events, config: Config):
 
     if config.risk_factor_tokens is not None:
         for e in events:
-            if e['codes'] not in config.risk_factor_tokens and e['codes'] not in config.target_tokens:
+            if e['codes'] not in config.risk_factor_tokens and e['codes'] != config.target_token:
                 e['codes'] = PAD_TOKEN
 
     return events
@@ -164,7 +164,7 @@ def get_outcome_date(events, config: Config, time_of_death=None):
                             END_OF_TIME for controls (normal patients)
 
     """
-    target_events = [e for e in events if any(icd == e['codes'] for icd in config.target_tokens)]
+    target_events = [e for e in events if config.target_token == e['codes']]
 
     if len(target_events) > 0:
         ever_develops_cancer = True
