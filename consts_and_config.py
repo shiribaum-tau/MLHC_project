@@ -31,6 +31,11 @@ class Config:
     dataset_name: str
     data_dir: pathlib.Path
 
+    # Main steps to execute
+    train: bool
+    val: bool
+    test: bool
+
     # Device and basic configuration
     run_name: str
     device_name: str
@@ -39,6 +44,7 @@ class Config:
     out_dir: pathlib.Path
     log_dir: pathlib.Path
     start_time: str
+    model_to_load: pathlib.Path
 
     # Data preprocessing configuration
     start_at_attendance: bool
@@ -80,7 +86,7 @@ class Config:
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
 
-        for path_key in ['data_dir', 'log_dir', 'out_dir']:
+        for path_key in ['data_dir', 'log_dir', 'out_dir', 'model_to_load']:
             ret[path_key] = str(ret[path_key])
 
         return ret

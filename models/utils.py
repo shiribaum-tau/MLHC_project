@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
+import os
+import logging
 
+logger = logging.getLogger("utils")
+
+logging.getLogger("utils").addHandler(logging.NullHandler())
 
 class CumulativeProbabilityLayer(nn.Module):
     """
@@ -68,6 +73,61 @@ class EarlyStopper:
             raise ValueError("mode must be either 'min' or 'max'")
 
         return self.counter >= self.patience
+
+
+class ModelCheckpoint:
+    """
+    Saves a copy of the model whenever the monitored metric improves
+    """
+    def __init__(self, save_dir, metric_to_monitor='val_loss', mode='min', min_delta=0.0, filename='best_model.pt'):
+        """
+        Args:
+            save_dir (str): Directory where to save the best model file.
+            metric_to_monitor (str): Name of the metric to monitor (for logging only).
+            mode (str): 'min' to minimize the metric, 'max' to maximize.
+            min_delta (float): Minimum change to qualify as an improvement.
+            filename (str): File name for saving the best model.
+        """
+        self.save_dir = save_dir
+        os.makedirs(save_dir, exist_ok=True)
+
+        self.monitor = metric_to_monitor
+        self.mode = mode
+        self.min_delta = min_delta
+        self.filename = filename
+
+        self.best_value = float('inf') if mode == 'min' else -float('inf')
+
+    def check_and_save(self, metric_value, model, optimizer, epoch_id):
+        """
+        Checks if the metric improved and saves the model if it did.
+
+        Args:
+            metric_value (float): Current value of the monitored metric.
+            model (torch.nn.Module): Model to save.
+            optimizer (torch.optim.Optimizer): Optimizer state to save.
+            epoch_id (int): Epoch number.
+        """
+        improved = False
+
+        if self.mode == 'min':
+            if metric_value < self.best_value - self.min_delta:
+                improved = True
+        elif self.mode == 'max':
+            if metric_value > self.best_value + self.min_delta:
+                improved = True
+
+        if improved:
+            self.best_value = metric_value
+            best_path = os.path.join(self.save_dir, self.filename)
+            checkpoint = {
+                'epoch': epoch_id,
+                'network_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+            }
+            torch.save(checkpoint, best_path)
+            logger.info(f"Model improved ({self.monitor} = {metric_value:.4f}). Saved to {best_path}")
+
 
 # class OneHotLayer(nn.Module):
 #     """

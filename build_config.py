@@ -16,6 +16,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser for Config parameters."""
     parser = argparse.ArgumentParser(description='Healthcare ML Configuration Parser')
 
+    # What main steps to execute
+    parser.add_argument('--train', action='store_true', default=False, help='Whether or not to train model')
+    parser.add_argument('--val', action='store_true', default=False, help='Whether or not to run model on val set')
+    parser.add_argument('--test', action='store_true', default=False, help='Whether or not to run model on test set')
+
     # Device and basic configuration
     parser.add_argument('--run-name', type=str, default=None,
                         help='Name of the run (default: None - set to a random 8 string)')
@@ -29,6 +34,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Log directory (default: log)')
     parser.add_argument('--data-dir', type=str, default=ROOT_DIR / "data",
                         help='Data directory (default: data)')
+    parser.add_argument('--model-to-load', type=str, default="",
+                        help='Path for model to evaluate when train=False (default: None)')
     parser.add_argument('--dataset-name', type=str, required=True,
                         help='Dataset name (required)')
     parser.add_argument('--start-at-attendance', action='store_true', default=False,
@@ -77,7 +84,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Number of trajectories per patient in test (default: 10)')
     parser.add_argument('--n-batches', type=int, default=1000,
                         help='Number of batches (default: 1000)')
-    parser.add_argument('--n-train-batches-per-eval', type=int, default=100,
+    parser.add_argument('--n-train-batches-per-eval', type=int, default=20,
                         help='Number of training batches per evaluation (default: 100)')
     parser.add_argument('--n-batches-for-eval', type=int, default=200,
                         help='Number of batches from the validation set to use for evaluation (default: 200)')
