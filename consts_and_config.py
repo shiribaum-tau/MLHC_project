@@ -88,7 +88,7 @@ class Config:
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
 
-        for path_key in ['base_log_dir', 'data_dir', 'log_dir', 'out_dir']:
+        for path_key in ['base_log_dir', 'data_dir', 'log_dir', 'out_dir', 'model_to_load']:
             ret[path_key] = str(ret[path_key])
 
         return ret

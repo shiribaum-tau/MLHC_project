@@ -8,6 +8,7 @@ from dataclasses import replace
 import numpy as np
 import torch
 
+
 from dataset.data_utils import get_dataset_loader
 from dataset.dataset import DiseaseProgressionDataset
 
@@ -63,7 +64,7 @@ def single_job(config, data):
 
     train_dataloader = get_dataset_loader(config, train_dataset)
     val_dataloader = get_dataset_loader(config, val_dataset)
-    test_dataloader = get_dataset_loader(config, test_dataset)
+    # test_dataloader = get_dataset_loader(config, test_dataset)
     best_model_path = None
 
     if config.train:
@@ -76,6 +77,31 @@ def single_job(config, data):
 
         best_model_path = model.train(train_dataloader, val_dataloader)
 
+
+if __name__ == "__main__":
+    logging.info("CUDA: %s", torch.cuda.is_available())
+
+    data, config = get_data_and_config_from_cmdline()
+
+    logging.info("Running on device %s", config.device)
+
+    logging.info("Starting run with config %s", config)
+
+    os.makedirs(config.log_dir, exist_ok=True)
+    os.makedirs(config.out_dir, exist_ok=True)
+
+    with open(config.log_dir / "base_config.json", "w") as f:
+        json.dump(config.dict(), f)
+
+        # Example grid
+    param_grid = {
+        'learning_rate': [0.001, 0.0005],
+        # 'hidden_dim': [24, 48],
+        'dropout': [0.2, 0.5]
+    }
+
+    # Run grid search
+    grid_search(param_grid, config, data)
     if config.val:
         network = MLP(config)
         network.to(config.device)
