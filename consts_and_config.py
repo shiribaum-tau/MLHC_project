@@ -31,6 +31,11 @@ class Config:
     dataset_name: str
     data_dir: pathlib.Path
 
+    # Main steps to execute
+    train: bool
+    val: bool
+    test: bool
+
     # Device and basic configuration
     run_name: str
     device_name: str
@@ -40,6 +45,7 @@ class Config:
     base_log_dir: pathlib.Path
     log_dir: pathlib.Path
     start_time: str
+    model_to_load: pathlib.Path
 
     # Data preprocessing configuration
     start_at_attendance: bool

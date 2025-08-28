@@ -1,18 +1,17 @@
-from dataclasses import dataclass
 import os
 import warnings
+import logging
 import numpy as np
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 import typing
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from consts_and_config import Config
-from models.eval import compute_metrics, mean_dict_values, append_to_dict, write_to_tb
-from models.utils import EarlyStopper
-import torch.nn.functional as F
-import logging
+from models.eval import compute_metrics, append_to_dict, write_to_tb
+from models.utils import EarlyStopper, ModelCheckpoint
 
 logger = logging.getLogger("model")
 
@@ -35,7 +34,7 @@ class Model:
         return loss
 
 
-    def evaluate(self, dataloader, n_batches=None):
+    def evaluate(self, dataloader, n_batches=None, plot_metrics=False):
         self.network.eval()
         total_loss = []
         results_for_eval = {}
@@ -67,7 +66,7 @@ class Model:
 
             total_loss.append(loss.item())
 
-        return np.mean(total_loss), compute_metrics(self.config, results_for_eval)
+        return np.mean(total_loss), compute_metrics(self.config, results_for_eval, plot_metrics)
 
 
     def train(self, train_dataloader: torch.utils.data.DataLoader,
@@ -81,9 +80,13 @@ class Model:
             # purge_step=self.config.resume_epoch * self.config['num_episodes_per_epoch'] // self.config['minibatch_print'] if self.config.resume_epoch > 0 else None
         )
 
+        tuning_metric = 'auc_36'
+        best_model_filename = f'val_{tuning_metric}_best_model.pt'
+
         try:
             stop_run = False
-            early_stopper = EarlyStopper(patience=5, min_delta=0.0001, metric_to_monitor='val_loss', mode='min')
+            early_stopper = EarlyStopper(patience=10, min_delta=0.0001, metric_to_monitor='val_loss', mode='min')
+            checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
 
             global_step = 0
 
@@ -93,7 +96,7 @@ class Model:
 
             for epoch_id in range(self.config.resume_epoch, self.config.resume_epoch + self.config.num_epochs, 1):
                 loss_monitor = []
-                results_for_eval = {}
+                train_results_for_eval = {}
                 logger.info(f"Epoch {epoch_id + 1}/{self.config.num_epochs}")
 
                 if stop_run:
@@ -124,7 +127,7 @@ class Model:
                     batch_results = dict(probs=probs.tolist(),
                              idx_of_last_y_to_eval=batch['idx_of_last_y_to_eval'].tolist(),
                              y=batch['y'].tolist())
-                    results_for_eval = append_to_dict(results_for_eval, batch_results)
+                    train_results_for_eval = append_to_dict(train_results_for_eval, batch_results)
                     loss_monitor.append(loss.cpu().data.item())
 
                     loss.backward()
@@ -145,7 +148,7 @@ class Model:
                         # Validation
                         # -------------------------
                         if val_dataloader is not None:
-                            loss_val, metrics_val = self.evaluate(val_dataloader, self.config.n_batches_for_eval)
+                            loss_val, _ = self.evaluate(val_dataloader, self.config.n_batches_for_eval)
 
                             write_to_tb(tb_writer, "Val_Loss", loss_val, global_step)
                             # for key, val in metrics_val.items():
@@ -163,8 +166,8 @@ class Model:
                 if loss_monitor: # Make sure it's not empty
                     write_to_tb(tb_writer, "Train_Loss", np.mean(loss_monitor), global_step)
 
-                metrics = compute_metrics(self.config, results_for_eval)
-                for key,val in metrics.items():
+                metrics_train = compute_metrics(self.config, train_results_for_eval)
+                for key,val in metrics_train.items():
                     write_to_tb(tb_writer, f"Train_{key}", val, global_step)
 
                 logger.info("Evaluating on full validation set")
@@ -173,16 +176,27 @@ class Model:
                 for key, val in metrics_val_full.items():
                     write_to_tb(tb_writer, f"Val_{key}", val, global_step)
 
-                # save model
+                # save model and optimizer weights and biases at each epoch
                 checkpoint = {
-                    "network": self.network,
-                    "optimizer": self.optimizer.state_dict()
+                    "epoch": epoch_id,
+                    "network_state_dict": self.network.state_dict(),
+                    "optimizer_state_dict": self.optimizer.state_dict()
                 }
-                checkpoint_path = os.path.join(self.log_path, 'Epoch_{0:d}_global_step_{1:d}.pt'.format((epoch_id + 1), global_step))
+                checkpoint_path = os.path.join(self.log_path, 'Epoch_{0:d}_global_step_{1:d}.pt'.format(epoch_id, global_step))
                 torch.save(obj=checkpoint, f=checkpoint_path)
                 logger.info('State dictionaries are saved into {0:s}'.format(checkpoint_path))
+
+                # save the best checkpoint if improved
+                checkpoint_saver.check_and_save(
+                    metric_value=metrics_val_full[tuning_metric],
+                    model=self.network,
+                    optimizer=self.optimizer,
+                    epoch_id=epoch_id
+                )
 
             logger.info('Training is completed.')
         finally:
             logger.info('Close tensorboard summary writer')
             tb_writer.close()
+
+        return self.log_path / best_model_filename
