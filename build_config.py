@@ -20,6 +20,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('--train', action='store_true', default=False, help='Whether or not to train model')
     parser.add_argument('--val', action='store_true', default=False, help='Whether or not to run model on val set')
     parser.add_argument('--test', action='store_true', default=False, help='Whether or not to run model on test set')
+    parser.add_argument('--grid-search', action='store_true', default=False, help='Whether or not to run grid search')
 
     # Device and basic configuration
     parser.add_argument('--run-name', type=str, default=None,
@@ -28,21 +29,22 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Device name (default: cpu)')
     parser.add_argument('--random-seed', type=int, default=42,
                         help='Random seed (default: 42)')
-    parser.add_argument('--out-dir', type=str, default=ROOT_DIR / "out",
-                        help='Output directory (default: out)')
-    parser.add_argument('--log-dir', type=str, default=ROOT_DIR / "logs",
-                        help='Log directory (default: log)')
+    parser.add_argument('--base-output-dir', type=str, default=ROOT_DIR / "runs",
+                        help='Base output directory (default: runs)')
     parser.add_argument('--data-dir', type=str, default=ROOT_DIR / "data",
                         help='Data directory (default: data)')
     parser.add_argument('--model-to-load', type=str, default="",
                         help='Path for model to evaluate when train=False (default: None)')
+    parser.add_argument('--grid-search-params', type=str, default=ROOT_DIR / "params.json",
+                        help='Path to JSON containing grid search parameters (default: params.json)')
     parser.add_argument('--dataset-name', type=str, required=True,
                         help='Dataset name (required)')
     parser.add_argument('--start-at-attendance', action='store_true', default=False,
                         help='Always include the attendance date in the trajectory (default: False)')
     parser.add_argument('--no-start-at-attendance', dest='start_at_attendance', action='store_false',
                         help='Do not include the attendance date in the trajectory')
-    
+    parser.add_argument('--target-token', type=str, default='642',
+                    help='Target token for prediction (default: "642")')
     # Data configuration
     parser.add_argument('--min-trajectory-length', type=int, default=5,
                         help='Minimum trajectory length (default: 5)')
@@ -126,9 +128,12 @@ def get_data_and_config_from_cmdline() -> Config:
     parser = create_argument_parser()
     args = parser.parse_args()
 
+    # Require model-to-load if train is False
+    if not args.grid_search and (not args.train and not args.model_to_load):
+        parser.error("If --train is False, --model-to-load must be specified.")
+
     args.data_dir = Path(args.data_dir)
-    args.log_dir = Path(args.log_dir)
-    args.out_dir = Path(args.out_dir)
+    args.base_output_dir = Path(args.base_output_dir)
 
     with open(args.data_dir / f"{args.dataset_name}.json") as f:
         data = json.load(f)
@@ -144,8 +149,9 @@ def get_data_and_config_from_cmdline() -> Config:
     args.device = get_device(args.device_name)
 
     if args.run_name is None:
-        args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=8))
+        args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=4))
 
+    args.run_dir = args.base_output_dir / args.run_name
     args.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     return data, Config(**vars(args))

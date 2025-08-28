@@ -1,17 +1,19 @@
+from itertools import product
 import json
 import logging
 import os
-import pickle
 import random
+from dataclasses import replace
 
 import numpy as np
 import torch
+import pandas as pd
+
 
 from dataset.data_utils import get_dataset_loader
 from dataset.dataset import DiseaseProgressionDataset
-from pathlib import Path
 
-from consts_and_config import PAD_TOKEN, UNK_TOKEN, Config, GROUP_SPLITS
+from consts_and_config import GROUP_SPLITS, Config
 from build_config import get_data_and_config_from_cmdline
 from models.eval import plot_multi_roc_pr
 
@@ -25,54 +27,80 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 
-if __name__ == "__main__":
-    logging.info("CUDA: %s", torch.cuda.is_available())
-    results_path = "out"
+def create_model_and_optimizer(config):
+    network = MLP(config)
+    network.to(config.device)
+    optimizer = torch.optim.Adam(network.parameters(), lr=config.learning_rate)
+    model = Model(network=network, optimizer=optimizer, config=config)
+    return model
 
-    data, config = get_data_and_config_from_cmdline()
+def grid_search(param_grid, base_config: Config, data):
 
-    logging.info("Running on device %s", config.device)
+    os.makedirs(base_config.run_dir, exist_ok=True)
+    with open(base_config.run_dir / "base_config.json", "w") as f:
+        json.dump(base_config.dict(), f)
 
-    logging.info("Starting run with config %s", config)
+    keys, values = zip(*param_grid.items())
+    results = []
+    csv_path = base_config.run_dir / "grid_search_results.csv"
+    for v in product(*values):
+        params = dict(zip(keys, v))
+        # Update config for this run
+        new_config = dict(params)
+        new_config['run_name'] = f"{base_config.run_name}_grid_{'__'.join(f'{k}_{val}' for k, val in params.items())}"
+        new_config['run_dir'] = base_config.run_dir / new_config['run_name']
+        print(new_config)
+        config = replace(base_config, **new_config)
+        config.train = True
+        config.val = True
 
-    os.makedirs(config.log_dir / config.run_name, exist_ok=True)
-    os.makedirs(config.out_dir, exist_ok=True)
+        out = single_run(config, data)
+        for result in out:
+            results.append({**params, **result})
 
-    with open(config.log_dir / config.run_name / "config.json", "w") as f:
-        json.dump(config.dict(), f)
+        df = pd.DataFrame(results)
+        df.to_csv(csv_path, index=False)
+        logging.info(f"Grid search results saved to {csv_path}")
+    
 
-    # Create Datasets
-    train_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TRAIN)
-    test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
-    val_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.VALIDATION)
-    logging.info("Number of patient for -Train:%d, -Dev:%d, -Test:%d", len(train_dataset), len(val_dataset), len(test_dataset))
-
+def single_run(config, data):
     # Set Random Seed
     random.seed(config.random_seed)
     np.random.seed(config.random_seed)
     torch.manual_seed(config.random_seed)
 
+    # Make run directories
+    os.makedirs(config.log_dir, exist_ok=True)
+    os.makedirs(config.out_dir, exist_ok=True)
+
+    with open(config.log_dir / "config.json", "w") as f:
+        json.dump(config.dict(), f)
+
+    # Create Datasets
+    train_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TRAIN)
+    val_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.VALIDATION)
+
     train_dataloader = get_dataset_loader(config, train_dataset)
     val_dataloader = get_dataset_loader(config, val_dataset)
-    test_dataloader = get_dataset_loader(config, test_dataset)
+
+    if config.test:
+        test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
+        test_dataloader = get_dataset_loader(config, test_dataset)
+
+    logging.info(f"Number of patients - Train: {len(train_dataset)}, Dev: {len(val_dataset)}, Test: {len(test_dataset) if config.test else 'N/A'}")
+
     best_model_path = None
+    final_out = None
 
     if config.train:
-        # Create model
-        network = MLP(config)
-        network.to(config.device)
-        optimizer = torch.optim.Adam(network.parameters(), lr=config.learning_rate)
-
-        model = Model(network=network, optimizer=optimizer, config=config)
-
+        model = create_model_and_optimizer(config)
         best_model_path = model.train(train_dataloader, val_dataloader)
 
-    if config.val:
-        network = MLP(config)
-        network.to(config.device)
-        optimizer = torch.optim.Adam(network.parameters(), lr=config.learning_rate)
+    logging.info("Training Complete.")
 
-        model = Model(network=network, optimizer=optimizer, config=config)
+    if config.val:
+        logging.info("Evaluating on validation set using the best model.")
+        model = create_model_and_optimizer(config)
 
         if config.train:
             model_path_to_load = best_model_path
@@ -91,8 +119,29 @@ if __name__ == "__main__":
 
         val_loss, metrics_full = model.evaluate(val_dataloader, plot_metrics=True)
 
-        plot_multi_roc_pr(
+        final_out = plot_multi_roc_pr(
             metrics=metrics_full,
             endpoints=config.month_endpoints,
             save_dir=config.out_dir
         )
+    return final_out
+
+if __name__ == "__main__":
+    logging.info("CUDA: %s", torch.cuda.is_available())
+
+    data, config = get_data_and_config_from_cmdline()
+
+    logging.info("Running on device %s", config.device)
+
+    logging.info("Starting run with config %s", config)
+
+    if config.grid_search:
+        with open(config.grid_search_params, "r") as f:
+            param_grid = json.load(f)
+            logging.info("Loaded grid search parameters: %s", param_grid)
+
+        # Run grid search
+        grid_search(param_grid, config, data)
+
+    else:
+        single_run(config, data)

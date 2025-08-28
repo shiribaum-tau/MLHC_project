@@ -15,7 +15,6 @@ END_OF_TIME = datetime.datetime.max
 
 ROOT_DIR = Path(".")
 
-
 class GROUP_SPLITS(Enum):
     TRAIN="train"
     VALIDATION="val"
@@ -35,16 +34,18 @@ class Config:
     train: bool
     val: bool
     test: bool
+    grid_search: bool
 
     # Device and basic configuration
     run_name: str
     device_name: str
     device: torch.device
     random_seed: int
-    out_dir: pathlib.Path
-    log_dir: pathlib.Path
+    base_output_dir: pathlib.Path
+    run_dir: pathlib.Path
     start_time: str
     model_to_load: pathlib.Path
+    grid_search_params: pathlib.Path
 
     # Data preprocessing configuration
     start_at_attendance: bool
@@ -75,13 +76,23 @@ class Config:
     n_train_batches_per_eval: int
     n_batches_for_eval: int
 
+    target_token: str # ("C25",)
+
     # Fields with defaults
-    target_tokens: tuple = ("642",) # ("C25",)
     risk_factor_tokens: tuple = None
     month_endpoints: tuple = (3, 6, 12, 36, 60)
     min_delta_checkpoint: float = 0.0
     min_delta_earlystopping: float = 0.0
     lr_decay: float = 0.5
+
+    # log_dir and out_dir are now properties
+    @property
+    def log_dir(self):
+        return self.run_dir / "log"
+
+    @property
+    def out_dir(self):
+        return self.run_dir / "out"
 
 
     def dict(self):
@@ -89,8 +100,9 @@ class Config:
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
 
-        for path_key in ['data_dir', 'log_dir', 'out_dir', 'model_to_load']:
-            ret[path_key] = str(ret[path_key])
+        for k, v in ret.items():
+            if isinstance(v, pathlib.Path):
+                ret[k] = str(v)
 
         return ret
 
