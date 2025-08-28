@@ -23,8 +23,6 @@ class Model:
         self.network = network
         self.optimizer = optimizer
         self.config = config
-        self.log_path = config.log_dir / config.run_name
-
 
     def get_model_loss(self, logits, batch):
         y_seq = batch['y_seq']
@@ -76,7 +74,7 @@ class Model:
         self.network.train()
 
         tb_writer = SummaryWriter(
-            log_dir=self.log_path
+            log_dir=self.config.log_dir
             # purge_step=self.config.resume_epoch * self.config['num_episodes_per_epoch'] // self.config['minibatch_print'] if self.config.resume_epoch > 0 else None
         )
 
@@ -86,7 +84,7 @@ class Model:
         try:
             stop_run = False
             early_stopper = EarlyStopper(patience=10, min_delta=0.0001, metric_to_monitor='val_loss', mode='min')
-            checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
+            checkpoint_saver = ModelCheckpoint(save_dir=self.config.log_dir, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
 
             global_step = 0
 
@@ -182,9 +180,9 @@ class Model:
                     "network_state_dict": self.network.state_dict(),
                     "optimizer_state_dict": self.optimizer.state_dict()
                 }
-                checkpoint_path = os.path.join(self.log_path, 'Epoch_{0:d}_global_step_{1:d}.pt'.format(epoch_id, global_step))
+                checkpoint_path = self.config.log_dir / 'Epoch_{0:d}_global_step_{1:d}.pt'.format(epoch_id, global_step)
                 torch.save(obj=checkpoint, f=checkpoint_path)
-                logger.info('State dictionaries are saved into {0:s}'.format(checkpoint_path))
+                logger.info(f'State dictionaries are saved into {checkpoint_path}')
 
                 # save the best checkpoint if improved
                 checkpoint_saver.check_and_save(
@@ -199,4 +197,4 @@ class Model:
             logger.info('Close tensorboard summary writer')
             tb_writer.close()
 
-        return self.log_path / best_model_filename
+        return self.config.log_dir / best_model_filename

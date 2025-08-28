@@ -211,6 +211,7 @@ data/olink_individuals_anonymous.json
 out/
 log/
 logs/
+runs/
 data/*.json
 job_files/slurm_default/
 .idea/

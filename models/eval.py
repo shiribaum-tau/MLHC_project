@@ -89,6 +89,7 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     """
 
     endpoint_names = [f"{i} Months" for i in endpoints]
+    logging.info(f"Writing ROC and PR curves to {save_dir}")
 
     # --- ROC Curve ---
     plt.figure(figsize=(7, 6))
@@ -104,7 +105,7 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     plt.tight_layout()
 
     if save_dir:
-        plt.savefig(os.path.join(save_dir, "roc_curves.png"), dpi=300)
+        plt.savefig(save_dir / "roc_curves.png", dpi=300)
     else:
         plt.show()
 
@@ -124,7 +125,7 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     plt.tight_layout()
 
     if save_dir:
-        plt.savefig(os.path.join(save_dir, "pr_curves.png"), dpi=300)
+        plt.savefig(save_dir / "pr_curves.png", dpi=300)
 
         results_to_save = []
         for endpoint in endpoints:
@@ -134,9 +135,10 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
                 "AUPR": metrics[f'aupr_{endpoint}']
             })
         results_df = pd.DataFrame(results_to_save)
-        results_df.to_csv(os.path.join(save_dir, "auc_aupr_results.csv"), index=False)
+        results_df.to_csv(save_dir / "auc_aupr_results.csv", index=False)
 
     else:
         plt.show()
     plt.close()
 
+    return results_to_save
