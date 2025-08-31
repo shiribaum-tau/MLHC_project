@@ -15,7 +15,7 @@ class MLP(AbstractRiskModel):
             self.add_module('linear_layer_{}'.format(layer), linear_layer)
         self.relu = nn.ReLU()
 
-    def encode_trajectory(self, embed_x): #, batch=None):
+    def encode_trajectory(self, embed_x, batch=None):
         seq_hidden = embed_x
         for indx in range(self.num_layers):
             name = 'linear_layer_{}'.format(indx)

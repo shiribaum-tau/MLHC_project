@@ -21,6 +21,10 @@ class GROUP_SPLITS(Enum):
     TEST="test"
     ALL="all"
 
+class SUPPORTED_MODELS(Enum):
+    MLP = "mlp"
+    TRANSFORMER = "transformer"
+
 @dataclass()
 class Config:
     # Required fields (no defaults) - grouped by category
@@ -56,11 +60,17 @@ class Config:
     pad_size: int
 
     # Model architecture
+    model_type: SUPPORTED_MODELS
     hidden_dim: int
     time_embed_dim: int
     num_layers: int
+    num_heads: int # For transformer
     dropout: float
     pool_name: str
+
+    # Embedding configuration
+    use_time_embed: bool
+    use_age_embed: bool
 
     # Training configuration
     learning_rate: float
@@ -69,6 +79,7 @@ class Config:
     eval_batch_size: int
     num_workers: int
     resume_epoch: int
+    weight_decay: float
 
     # Evaluation configuration
     n_trajectories_per_patient_in_test: int
@@ -103,6 +114,8 @@ class Config:
         for k, v in ret.items():
             if isinstance(v, pathlib.Path):
                 ret[k] = str(v)
+            elif isinstance(v, Enum):
+                ret[k] = v.value
 
         return ret
 

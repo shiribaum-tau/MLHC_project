@@ -1,7 +1,5 @@
 Todo:
 * Metrics:
-    * AUC
-    * AUPR
     * F1
 
 * More models:
@@ -14,7 +12,6 @@ Todo:
 * Data:
     * Inclusion/Exclusion criteria (w/ men?, blood tests for pregnant people/people with cancer?)
     * Diseases to exclude?
-    * 250k people
 
 * Write:
     * Intro

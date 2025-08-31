@@ -87,7 +87,7 @@ class Model:
 
             reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.config.log_dir, device=self.config.device,
                                           curr_lr=self.config.learning_rate ,metric_to_monitor=f"val_{tuning_metric}", mode="max", lr_decay=self.config.lr_decay,
-                                          patience=5, min_delta=self.config.min_delta_checkpoint, best_model_name=best_model_filename)
+                                          patience=5, min_delta=self.config.min_delta_checkpoint, best_model_filename=best_model_filename)
             # checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
             # early_stopper = EarlyStopper(patience=10, min_delta=self.config.min_delta_earlystopping, metric_to_monitor='val_loss', mode='min')
             # reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.log_path, device=self.config.device,

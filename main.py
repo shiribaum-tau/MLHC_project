@@ -1,3 +1,4 @@
+from consts_and_config import GROUP_SPLITS, Config, SUPPORTED_MODELS
 from itertools import product
 import json
 import logging
@@ -19,6 +20,7 @@ from models.eval import plot_multi_roc_pr
 
 from models.mlp import MLP
 from models.model import Model
+from models.transformer import Transformer
 
 
 logging.basicConfig(
@@ -28,9 +30,15 @@ logging.basicConfig(
 )
 
 def create_model_and_optimizer(config):
-    network = MLP(config)
+    if config.model_type == SUPPORTED_MODELS.MLP:
+        network = MLP(config)
+    if config.model_type == SUPPORTED_MODELS.TRANSFORMER:
+        network = Transformer(config)
+    else:
+        raise ValueError(f"Unknown model_type: {config.model_type}")
     network.to(config.device)
-    optimizer = torch.optim.Adam(network.parameters(), lr=config.learning_rate)
+    optimizer = torch.optim.Adam(network.parameters(), lr=config.learning_rate,
+                                 weight_decay=config.weight_decay)
     model = Model(network=network, optimizer=optimizer, config=config)
     return model
 

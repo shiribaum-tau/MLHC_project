@@ -136,7 +136,7 @@ class ReduceLROnPlateau:
     """
     def __init__(self, optimizer, log_path, device, curr_lr, metric_to_monitor="val_loss", mode="min",
                  lr_decay=0.1, patience=5, min_delta=0.0,
-                 best_model_name="best_model.pt"):
+                 best_model_filename="best_model.pt"):
         """
         Args:
             optimizer: torch optimizer
@@ -148,7 +148,7 @@ class ReduceLROnPlateau:
             lr_decay: factor to reduce LR by
             patience: epochs with no improvement before reducing LR
             min_delta: minimum change in monitored metric to qualify as improvement
-            best_model_name: file name for best model checkpoint
+            best_model_filename: file name for best model checkpoint
         """
         self.optimizer = optimizer
         self.log_path = log_path
@@ -158,7 +158,7 @@ class ReduceLROnPlateau:
         self.curr_lr = curr_lr
         self.patience = patience
         self.min_delta = min_delta
-        self.best_model_path = os.path.join(log_path, best_model_name)
+        self.best_model_path = os.path.join(log_path, best_model_filename)
         self.device = device
 
         if mode == "min":

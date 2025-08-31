@@ -6,7 +6,7 @@ import string
 import datetime
 import torch
 from typing import Optional, Union
-from consts_and_config import GROUP_SPLITS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Config
+from consts_and_config import GROUP_SPLITS, SUPPORTED_MODELS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Config
 
 
 # config = Config(vocab, max_events_length=max_events_length, pad_size=max_events_length,
@@ -14,6 +14,7 @@ from consts_and_config import GROUP_SPLITS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Conf
     # #                 min_trajectory_length=3, num_workers=0)
 def create_argument_parser() -> argparse.ArgumentParser:
     """Create and configure the argument parser for Config parameters."""
+
     parser = argparse.ArgumentParser(description='Healthcare ML Configuration Parser')
 
     # What main steps to execute
@@ -45,6 +46,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Do not include the attendance date in the trajectory')
     parser.add_argument('--target-token', type=str, default='642',
                     help='Target token for prediction (default: "642")')
+    parser.add_argument('--model-type', type=str, default=SUPPORTED_MODELS.MLP.value, choices=[m.value for m in SUPPORTED_MODELS], help=f"Model architecture to use (default: {SUPPORTED_MODELS.MLP.value})")
+
     # Data configuration
     parser.add_argument('--min-trajectory-length', type=int, default=5,
                         help='Minimum trajectory length (default: 5)')
@@ -68,7 +71,15 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Pooling layer name (default: GlobalAvgPool)')
     parser.add_argument('--num-layers', type=int, default=1,
                         help='Number of layers (default: 1)')
-    
+    parser.add_argument('--num-heads', type=int, default=8,
+                        help='Number of attention heads (default: 8, required for Transformer)')
+
+    # Embedding configuration
+    parser.add_argument('--no-time-embed', action='store_false', dest='use_time_embed', default=True,
+                        help='Do not use time embedding in the transformer model (default: True)')
+    parser.add_argument('--no-age-embed', action='store_false', dest='use_age_embed', default=True,
+                        help='Do not use age embedding in the transformer model (default: True)')
+
     # Training configuration
     parser.add_argument('--learning-rate', type=float, default=0.001,
                         help='Learning rate (default: 0.001)')
@@ -80,6 +91,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Evaluation batch size (default: 16)')
     parser.add_argument('--num-workers', type=int, default=0,  # was 8
                         help='Number of workers for data loader (default: 0)')
+    parser.add_argument('--weight-decay', type=float, default=0.0,
+                        help='Weight decay for optimizer (default: 0.0)')
     
     # Testing and evaluation configuration
     parser.add_argument('--n-trajectories-per-patient-in-test', type=int, default=10,
@@ -124,6 +137,7 @@ def get_device(device_name):
 
 
 def get_data_and_config_from_cmdline() -> Config:
+    # Validate num_heads for Transformer
     """Main function to parse command line arguments and return a Config object."""
     parser = create_argument_parser()
     args = parser.parse_args()
@@ -134,6 +148,15 @@ def get_data_and_config_from_cmdline() -> Config:
 
     args.data_dir = Path(args.data_dir)
     args.base_output_dir = Path(args.base_output_dir)
+
+    # Validate model selection
+    try:
+        args.model_type = SUPPORTED_MODELS(args.model_type)
+    except ValueError:
+        parser.error(f"Invalid model_type '{args.model_type}'. Allowed values: {[m.value for m in SUPPORTED_MODELS]}")
+
+    if args.model_type == SUPPORTED_MODELS.TRANSFORMER and args.num_heads is None:
+        parser.error("--num-heads must be specified when using Transformer model.")
 
     with open(args.data_dir / f"{args.dataset_name}.json") as f:
         data = json.load(f)
