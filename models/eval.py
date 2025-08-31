@@ -92,16 +92,16 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     logging.info(f"Writing ROC and PR curves to {save_dir}")
 
     # --- ROC Curve ---
-    plt.figure(figsize=(7, 6))
+    plt.figure(figsize=(10, 8))
     for endpoint_idx, endpoint in enumerate(endpoints):
         curr_fpr, curr_tpr, curr_rocauc = metrics[f'fpr_{endpoint}'], metrics[f'tpr_{endpoint}'], metrics[f'auc_{endpoint}']
         plt.plot(curr_fpr, curr_tpr, lw=2, label=f"{endpoint_names[endpoint_idx]} (AUC = {curr_rocauc:.3f})")
 
     plt.plot([0, 1], [0, 1], color="gray", linestyle="--")
-    plt.xlabel("False Positive Rate")
-    plt.ylabel("True Positive Rate")
-    plt.title("ROC Curves")
-    plt.legend(loc="lower right")
+    plt.xlabel("False Positive Rate", fontsize=16)
+    plt.ylabel("True Positive Rate", fontsize=16)
+    plt.title("ROC Curves", fontsize=18)
+    plt.legend(loc="lower right", fontsize=14)
     plt.tight_layout()
 
     if save_dir:
@@ -112,16 +112,16 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     plt.close()
 
     # --- Precision-Recall Curve ---
-    plt.figure(figsize=(7, 6))
+    plt.figure(figsize=(10, 8))
 
     for endpoint_idx, endpoint in enumerate(endpoints):
         curr_recall, curr_precision, curr_aupr = metrics[f'recalls_{endpoint}'], metrics[f'precisions_{endpoint}'], metrics[f'aupr_{endpoint}']
         plt.plot(curr_recall, curr_precision, lw=2, label=f"{endpoint_names[endpoint_idx]} (AUPR = {curr_aupr:.3f})")
 
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.title("Precision-Recall Curves")
-    plt.legend(loc="lower left")
+    plt.xlabel("Recall", fontsize=16)
+    plt.ylabel("Precision", fontsize=16)
+    plt.title("Precision-Recall Curves", fontsize=18)
+    plt.legend(loc="upper right", fontsize=14)
     plt.tight_layout()
 
     if save_dir:

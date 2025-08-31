@@ -32,7 +32,7 @@ logging.basicConfig(
 def create_model_and_optimizer(config):
     if config.model_type == SUPPORTED_MODELS.MLP:
         network = MLP(config)
-    if config.model_type == SUPPORTED_MODELS.TRANSFORMER:
+    elif config.model_type == SUPPORTED_MODELS.TRANSFORMER:
         network = Transformer(config)
     else:
         raise ValueError(f"Unknown model_type: {config.model_type}")
