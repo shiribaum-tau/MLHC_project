@@ -95,6 +95,7 @@ class Config:
     min_delta_checkpoint: float = 0.0
     min_delta_earlystopping: float = 0.0
     lr_decay: float = 0.5
+    class_pred_threshold: float = 0.5
 
     # log_dir and out_dir are now properties
     @property

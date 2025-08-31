@@ -1,6 +1,6 @@
 import numpy as np
 import os
-from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, roc_curve
+from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, roc_curve, confusion_matrix, f1_score, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import pandas as pd
 import logging
@@ -45,39 +45,60 @@ def compute_metrics(config, results, plot_metrics=False):
 
         probs_for_eval, labels_for_eval = get_probs_and_label(results['probs'], results['idx_of_last_y_to_eval'], results["y"], index=endpoint_idx)
 
+        # --- AUC ---
         try:
             auc_value = roc_auc_score(labels_for_eval, probs_for_eval)
         except Exception as e:
             logger.warning(f"Failed to compute AUC for endpoint {endpoint}: {e}")
             auc_value = None
 
+        # --- AUPR ---
         try:
-            precisions, recalls, _ = precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
+            precisions, recalls, thresholds = precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
             aupr = auc(recalls, precisions)
         except Exception as e:
             logger.warning(f"Failed to compute AUPR for endpoint {endpoint}: {e}")
-            precisions = []
-            recalls = []
+            precisions, recalls, thresholds = [], [], []
             aupr = None
+
+        # --- Best F1 and Threshold ---
+        best_f1, best_threshold, recall_at_best_f1_threshold, precision_at_best_f1_threshold = None, None, None, None
+        if len(thresholds) > 0:
+            f1_scores = []
+            for thr in thresholds:
+                preds_thr = (probs_for_eval >= thr).astype(int)
+                f1 = f1_score(labels_for_eval, preds_thr)
+                f1_scores.append(f1)
+            best_idx = int(np.argmax(f1_scores))
+            best_f1 = f1_scores[best_idx]
+            best_threshold = thresholds[best_idx]
+            precision_at_best_f1_threshold = precisions[best_idx]
+            recall_at_best_f1_threshold = recalls[best_idx]
 
         metrics[f'auc_{endpoint}'] = auc_value
         metrics[f'aupr_{endpoint}'] = aupr
+        metrics[f'best_f1_{endpoint}'] = best_f1
+        metrics[f'best_f1_threshold_{endpoint}'] = best_threshold
+        metrics[f'precision_at_best_f1_threshold_{endpoint}'] = precision_at_best_f1_threshold
+        metrics[f'recall_at_best_f1_threshold_{endpoint}'] = recall_at_best_f1_threshold
 
         if plot_metrics:
             fpr, tpr, _ = roc_curve(labels_for_eval, probs_for_eval, pos_label=1)
+            preds_for_eval = (np.array(probs_for_eval) >= config.class_pred_threshold).astype(int)
+            cm = confusion_matrix(labels_for_eval, preds_for_eval)
+
             metrics[f'tpr_{endpoint}'] = tpr
             metrics[f'fpr_{endpoint}'] = fpr
             metrics[f'precisions_{endpoint}'] = precisions
             metrics[f'recalls_{endpoint}'] = recalls
-
-    # c_index = compute_c_index(probs, censor_times, golds)
+            metrics[f'confusion_matrix_{endpoint}'] = cm
 
     return metrics
 
 
-def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
+def plot_metrics(metrics, endpoints, save_dir=None):
     """
-    Plot ROC and PR curves for multiple endpoints.
+    Plot ROC and PR curves and Confusion matrices for multiple endpoints.
 
     Parameters
     ----------
@@ -132,7 +153,11 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
             results_to_save.append({
                 "Endpoint": endpoint,
                 "AUC": metrics[f'auc_{endpoint}'],
-                "AUPR": metrics[f'aupr_{endpoint}']
+                "AUPR": metrics[f'aupr_{endpoint}'],
+                "recall": metrics[f'recall_at_best_f1_threshold_{endpoint}'],
+                "precision": metrics[f'precision_at_best_f1_threshold_{endpoint}'],
+                "f1": metrics[f'best_f1_{endpoint}'],
+                "best_f1_threshold": metrics[f'best_f1_threshold_{endpoint}'],
             })
         results_df = pd.DataFrame(results_to_save)
         results_df.to_csv(save_dir / "auc_aupr_results.csv", index=False)
@@ -140,5 +165,20 @@ def plot_multi_roc_pr(metrics, endpoints, save_dir=None):
     else:
         plt.show()
     plt.close()
+
+    # --- Confusion Matrix ---
+    for endpoint_idx, endpoint in enumerate(endpoints):
+        cm = metrics[f'confusion_matrix_{endpoint}']
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Negative", "Positive"])
+        disp.plot(cmap="Blues")
+        plt.title(f"Confusion Matrix - {endpoint_names[endpoint_idx]}")
+        plt.show()
+
+        if save_dir:
+            plt.savefig(save_dir / f"cm_{endpoint_names[endpoint_idx]}.png", dpi=300)
+
+        else:
+            plt.show()
+        plt.close()
 
     return results_to_save

@@ -10,13 +10,12 @@ import numpy as np
 import torch
 import pandas as pd
 
-
 from dataset.data_utils import get_dataset_loader
 from dataset.dataset import DiseaseProgressionDataset
 
 from consts_and_config import GROUP_SPLITS, Config
 from build_config import get_data_and_config_from_cmdline
-from models.eval import plot_multi_roc_pr
+from models.eval import plot_metrics
 
 from models.mlp import MLP
 from models.model import Model
@@ -127,7 +126,7 @@ def single_run(config, data):
 
         val_loss, metrics_full = model.evaluate(val_dataloader, plot_metrics=True)
 
-        final_out = plot_multi_roc_pr(
+        final_out = plot_metrics(
             metrics=metrics_full,
             endpoints=config.month_endpoints,
             save_dir=config.out_dir
