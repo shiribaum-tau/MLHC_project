@@ -1,4 +1,9 @@
 {
-    "dropout": [0.2, 0.5],
-    "hidden_dim": [24, 48]
+    "dropout": [0, 0.1],
+    "hidden_dim": [32, 256],
+    "num_layers": [1, 2, 4],
+    "weight_decay": [0, 0.001],
+    "use_time_embed": [true, false],
+    "use_age_embed": [true, false],
+    "num_heads": [8, 16, 32]
 }

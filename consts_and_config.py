@@ -94,6 +94,7 @@ class Config:
     month_endpoints: tuple = (3, 6, 12, 36, 60)
     min_delta_checkpoint: float = 0.0
     min_delta_earlystopping: float = 0.0
+    reduce_lr_patience: int = 5
     lr_decay: float = 0.5
     class_pred_threshold: float = 0.5
 

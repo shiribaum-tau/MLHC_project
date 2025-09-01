@@ -34,7 +34,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Base output directory (default: runs)')
     parser.add_argument('--data-dir', type=str, default=ROOT_DIR / "data",
                         help='Data directory (default: data)')
-    parser.add_argument('--model-to-load', type=str, default="",
+    parser.add_argument('--model-to-load', type=str, default=None,
                         help='Path for model to evaluate when train=False (default: None)')
     parser.add_argument('--grid-search-params', type=str, default=ROOT_DIR / "params.json",
                         help='Path to JSON containing grid search parameters (default: params.json)')
@@ -99,7 +99,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Number of trajectories per patient in test (default: 10)')
     parser.add_argument('--n-batches', type=int, default=1000,
                         help='Number of batches (default: 1000)')
-    parser.add_argument('--n-train-batches-per-eval', type=int, default=20,
+    parser.add_argument('--n-train-batches-per-eval', type=int, default=100,
                         help='Number of training batches per evaluation (default: 100)')
     parser.add_argument('--n-batches-for-eval', type=int, default=200,
                         help='Number of batches from the validation set to use for evaluation (default: 200)')

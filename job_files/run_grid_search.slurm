@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=transformer_overfit
+#SBATCH --job-name=sb_transformer
 #SBATCH --account=gpu-research
 #SBATCH --partition=gpu-elbo
 #SBATCH --ntasks=1
@@ -35,4 +35,4 @@ SRUN_ERR="runs/slurm/err/device_used-${SLURMD_NODENAME}-${SLURM_SUBMIT_HOST}-${S
 # # Run the specified Python script
 # srun /home/elhanan/PROGRAMS/conda/envs/evo_model/bin/python ../scripts/"$JOB_NAME" > "$SRUN_OUT" 2> "$SRUN_ERR"
 # lps_females_anonymous   sample_data_formatted
-srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name pat_5_dropout_02_transformer_overfit --num-epochs 50 --model-type transformer --dataset-name lps_females_anonymous --device-name gpu --train --val > "$SRUN_OUT" 2> "$SRUN_ERR"
+srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --model-type transformer --dataset-name lps_females_anonymous --device-name gpu --grid-search > "$SRUN_OUT" 2> "$SRUN_ERR"

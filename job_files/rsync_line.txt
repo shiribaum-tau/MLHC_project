@@ -1,0 +1,5 @@
+rsync -avz \
+  --include='*/' \
+  --include='events.out.tfevents.*' \
+  --exclude='*' \
+  shirabaum@rack-elhanan-01.cs.tau.ac.il:/home/yandex/MLFH2025/shirabaum/MLHC_project/runs runs/

@@ -23,3 +23,15 @@ Todo:
 
     * the loss is masked such that only the first instance of cancer affects the loss.
         It *is* calculated as part of the AUC, etc.
+
+
+
+Things to try:
+* tuning metric = val loss
+* more epochs + early stop
+    * early stop on learning rate and tuning metric
+* add men to the data (halleluja)
+* Pancreatic cancer
+    * Skin cancer?
+* pick threshold (maximize f1?)
+

@@ -1,4 +1,3 @@
-import os
 import warnings
 import logging
 import numpy as np
@@ -11,7 +10,7 @@ from tqdm import tqdm
 
 from consts_and_config import Config
 from models.eval import compute_metrics, append_to_dict, write_to_tb
-from models.utils import EarlyStopper, ModelCheckpoint, ReduceLROnPlateau
+from models.utils import ReduceLROnPlateau
 
 
 logger = logging.getLogger("model")
@@ -87,12 +86,7 @@ class Model:
 
             reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.config.log_dir, device=self.config.device,
                                           curr_lr=self.config.learning_rate ,metric_to_monitor=f"val_{tuning_metric}", mode="max", lr_decay=self.config.lr_decay,
-                                          patience=5, min_delta=self.config.min_delta_checkpoint, best_model_filename=best_model_filename)
-            # checkpoint_saver = ModelCheckpoint(save_dir=self.log_path, metric_to_monitor=f'val_{tuning_metric}', mode='max', min_delta=0.001, filename=best_model_filename)
-            # early_stopper = EarlyStopper(patience=10, min_delta=self.config.min_delta_earlystopping, metric_to_monitor='val_loss', mode='min')
-            # reduce_lr = ReduceLROnPlateau(optimizer=self.optimizer, log_path=self.log_path, device=self.config.device,
-            #                               curr_lr=self.config.learning_rate ,metric_to_monitor=f"val_{tuning_metric}", mode="min", lr_decay=0.5,
-            #                               patience=5, min_delta=0.0001)
+                                          patience=self.config.reduce_lr_patience, min_delta=self.config.min_delta_checkpoint, best_model_filename=best_model_filename)
 
             global_step = 0
             num_batches_per_epoch = min(len(train_dataloader), (self.config.n_batches))
@@ -189,7 +183,6 @@ class Model:
                 logger.info(f'State dictionaries are saved into {checkpoint_path}')
 
                 # save the best model if improved, if not check patience and reduce lr when necessary
-                # reduce_lr.step(loss_val_full, epoch_id, self.network)
                 lr_monitor = reduce_lr.step(metrics_val_full[tuning_metric], epoch_id, self.network)
 
                 write_to_tb(tb_writer, "lr", lr_monitor, global_step)
@@ -198,13 +191,6 @@ class Model:
                 #     logger.info('Early stopping')
                 #     stop_run = True
 
-                # save the best checkpoint if improved
-                # checkpoint_saver.check_and_save(
-                #     metric_value=metrics_val_full[tuning_metric],
-                #     model=self.network,
-                #     optimizer=self.optimizer,
-                #     epoch_id=epoch_id
-                # )
 
             logger.info('Training is completed.')
         finally:
