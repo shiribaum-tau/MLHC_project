@@ -65,8 +65,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Pad size for sequences (default: None - automatically set to max_events_length)')
     parser.add_argument('--hidden-dim', type=int, default=24,  # was 256
                         help='Hidden dimension (default: 24)')
-    parser.add_argument('--dropout', type=float, default=0.2,
-                        help='Dropout rate (default: 0.2)')
+    parser.add_argument('--dropout', type=float, default=0,
+                        help='Dropout rate (default: 0)')
     parser.add_argument('--pool-name', type=str, default='GlobalAvgPool',
                         help='Pooling layer name (default: GlobalAvgPool)')
     parser.add_argument('--num-layers', type=int, default=1,

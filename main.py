@@ -96,23 +96,20 @@ def single_run(config, data):
 
     logging.info(f"Number of patients - Train: {len(train_dataset)}, Dev: {len(val_dataset)}, Test: {len(test_dataset) if config.test else 'N/A'}")
 
-    best_model_path = None
     final_out = None
 
     if config.train:
         model = create_model_and_optimizer(config)
-        best_model_path = model.train(train_dataloader, val_dataloader)
+        model_path_to_load = model.train(train_dataloader, val_dataloader)
+    else:
+        model_path_to_load = config.model_to_load
+
 
     logging.info("Training Complete.")
 
     if config.val:
         logging.info("Evaluating on validation set using the best model.")
         model = create_model_and_optimizer(config)
-
-        if config.train:
-            model_path_to_load = best_model_path
-        else:
-            model_path_to_load = config.model_to_load
 
         saved_checkpoint = torch.load(
             f=model_path_to_load,

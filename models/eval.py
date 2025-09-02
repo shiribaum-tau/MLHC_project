@@ -40,12 +40,16 @@ def get_probs_and_label(probs, idx_of_last_y_to_eval, y, index=4):
 
 
 def compute_metrics(config, results, plot_metrics=False):
+    logger.info("Starting compute_metrics")
     metrics = {}
     for endpoint_idx, endpoint in enumerate(config.month_endpoints):
+        logger.info(f"Processing endpoint {endpoint} (index {endpoint_idx})")
 
+        logger.info("Calling get_probs_and_label")
         probs_for_eval, labels_for_eval = get_probs_and_label(results['probs'], results['idx_of_last_y_to_eval'], results["y"], index=endpoint_idx)
 
         # --- AUC ---
+        logger.info("Computing AUC")
         try:
             auc_value = roc_auc_score(labels_for_eval, probs_for_eval)
         except Exception as e:
@@ -53,6 +57,7 @@ def compute_metrics(config, results, plot_metrics=False):
             auc_value = None
 
         # --- AUPR ---
+        logger.info("Computing AUPR")
         try:
             precisions, recalls, thresholds = precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
             aupr = auc(recalls, precisions)
@@ -62,16 +67,16 @@ def compute_metrics(config, results, plot_metrics=False):
             aupr = None
 
         # --- Best F1 and Threshold ---
-        best_f1, best_threshold, recall_at_best_f1_threshold, precision_at_best_f1_threshold = None, None, None, None
-        if len(thresholds) > 0:
-            f1_scores = []
-            for thr in thresholds:
-                preds_thr = (probs_for_eval >= thr).astype(int)
-                f1 = f1_score(labels_for_eval, preds_thr)
-                f1_scores.append(f1)
-            best_idx = int(np.argmax(f1_scores))
+        logger.info("Computing best F1 and threshold")
+        if thresholds.size > 0:
+            # Compute F1 directly from precision and recall (vectorized)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
+                f1_scores = np.nan_to_num(f1_scores, nan=0.0)  # Replace NaNs from division by zero
+
+            best_idx = np.argmax(f1_scores)
             best_f1 = f1_scores[best_idx]
-            best_threshold = thresholds[best_idx]
+            best_threshold = thresholds[best_idx] if best_idx < thresholds.size else thresholds[-1]
             precision_at_best_f1_threshold = precisions[best_idx]
             recall_at_best_f1_threshold = recalls[best_idx]
 
@@ -82,7 +87,10 @@ def compute_metrics(config, results, plot_metrics=False):
         metrics[f'precision_at_best_f1_threshold_{endpoint}'] = precision_at_best_f1_threshold
         metrics[f'recall_at_best_f1_threshold_{endpoint}'] = recall_at_best_f1_threshold
 
+        logger.info("Finished computing best F1 and threshold")
+
         if plot_metrics:
+            logger.info("Computing ROC curve and confusion matrix")
             fpr, tpr, _ = roc_curve(labels_for_eval, probs_for_eval, pos_label=1)
             preds_for_eval = (np.array(probs_for_eval) >= config.class_pred_threshold).astype(int)
             cm = confusion_matrix(labels_for_eval, preds_for_eval)
@@ -93,6 +101,9 @@ def compute_metrics(config, results, plot_metrics=False):
             metrics[f'recalls_{endpoint}'] = recalls
             metrics[f'confusion_matrix_{endpoint}'] = cm
 
+        logger.info(f"Finished endpoint {endpoint}")
+
+    logger.info("compute_metrics finished")
     return metrics
 
 
@@ -172,7 +183,7 @@ def plot_metrics(metrics, endpoints, save_dir=None):
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["Negative", "Positive"])
         disp.plot(cmap="Blues")
         plt.title(f"Confusion Matrix - {endpoint_names[endpoint_idx]}")
-        plt.show()
+        # plt.show()
 
         if save_dir:
             plt.savefig(save_dir / f"cm_{endpoint_names[endpoint_idx]}.png", dpi=300)

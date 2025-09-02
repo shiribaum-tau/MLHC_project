@@ -1,0 +1,7 @@
+{
+    "hidden_dim": [32, 256],
+    "num_layers": [1, 2, 4],
+    "use_time_embed": [false],
+    "use_age_embed": [false],
+    "num_heads": [8, 16, 32]
+}
