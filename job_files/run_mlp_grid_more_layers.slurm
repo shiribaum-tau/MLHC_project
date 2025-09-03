@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=tf_no_em_gs
+#SBATCH --job-name=mlp_gs
 #SBATCH --account=gpu-research
 #SBATCH --partition=gpu-elbo
 #SBATCH --ntasks=1
@@ -35,4 +35,4 @@ SRUN_ERR="runs/slurm/err/device_used-${SLURMD_NODENAME}-${SLURM_SUBMIT_HOST}-${S
 # # Run the specified Python script
 # srun /home/elhanan/PROGRAMS/conda/envs/evo_model/bin/python ../scripts/"$JOB_NAME" > "$SRUN_OUT" 2> "$SRUN_ERR"
 # lps_females_anonymous   sample_data_formatted
-srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name tf_no_te_arch_gs --num-epochs 27 --model-type transformer --dataset-name lps_females_anonymous --device-name gpu --grid-search --grid-search-params param_grids/params_trans_no_embed_arch.json > "$SRUN_OUT" 2> "$SRUN_ERR"
+srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name mlp_arch_gs_more_layers --num-epochs 27 --model-type mlp --dataset-name lps_females_anonymous --device-name gpu --grid-search --grid-search-params param_grids/params_mlp_arch_more_layers.json > "$SRUN_OUT" 2> "$SRUN_ERR"

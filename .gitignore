@@ -216,3 +216,4 @@ data/*.json
 job_files/slurm_default/
 .idea/
 .DS_Store
+overfite_runs/
