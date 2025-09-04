@@ -25,7 +25,6 @@ Todo:
         It *is* calculated as part of the AUC, etc.
 
 
-
 Things to try:
 * tuning metric = val loss
 * more epochs + early stop

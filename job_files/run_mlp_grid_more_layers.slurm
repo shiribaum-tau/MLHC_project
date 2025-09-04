@@ -10,7 +10,7 @@
 #SBATCH --error=slurm_default/err/%x_device_used-%N-%u-%j.err 
 #SBATCH --mail-type=ALL,TIME_LIMIT_80
 
-cd /home/yandex/MLFH2025/shirabaum/MLHC_project # SBATCH --array=0-5%6
+cd /home/elhanan/home/shirabaum/MLHC_project # SBATCH --array=0-5%6
 
 # JOB_NAME="$1"
 

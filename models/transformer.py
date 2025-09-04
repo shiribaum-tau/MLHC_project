@@ -26,6 +26,31 @@ class Transformer(AbstractRiskModel):
             transformer_layer = TransformerLayer(config)
             self.add_module('transformer_layer_{}'.format(layer), transformer_layer)
 
+
+    # def condition_on_pos_embed(self, x, embed, embed_type='time'):
+    #     if embed_type == 'time':
+    #         return self.t_embed_scale_fc(embed) * x + self.t_embed_add_fc(embed)
+    #     elif embed_type == 'age':
+    #         return self.a_embed_scale_fc(embed) * x + self.a_embed_add_fc(embed)
+    #     else:
+    #         raise NotImplementedError("Embed type {} not supported".format(embed_type))
+
+    def condition_on_pos_embed(self, embed_x, batch):
+        if self.use_time_embed:
+            time = batch['time_seq'].float()
+            # embed_x = self.condition_on_pos_embed(embed_x, time, 'time')
+            embed_x = self.t_embed_scale_fc(time) * embed_x + self.t_embed_add_fc(time)
+
+        if self.use_age_embed:
+            age = batch['age_seq'].float()
+            # embed_x = self.condition_on_pos_embed(embed_x, age, 'age')
+            embed_x = self.a_embed_scale_fc(age) * embed_x + self.a_embed_add_fc(age)
+
+        return embed_x
+
+    def get_x_embedding_for_transformer(self, embed_x, batch):
+        return self.condition_on_pos_embed(embed_x, batch)
+
     def encode_trajectory(self, embed_x, batch=None):
         """
             Computes a forward pass of the model.
@@ -33,13 +58,7 @@ class Transformer(AbstractRiskModel):
             Returns:
                 The result of feeding the input through the model.
         """
-        if self.use_time_embed:
-            time = batch['time_seq'].float()
-            embed_x = self.condition_on_pos_embed(embed_x, time, 'time')
-
-        if self.use_age_embed:
-            age = batch['age_seq'].float()
-            embed_x = self.condition_on_pos_embed(embed_x, age, 'age')
+        embed_x = self.get_x_embedding_for_transformer(embed_x, batch)
 
         # Run through transformer
         seq_x = embed_x
@@ -48,14 +67,6 @@ class Transformer(AbstractRiskModel):
             seq_x = self._modules[name](seq_x)
         return seq_x
 
-    def condition_on_pos_embed(self, x, embed, embed_type='time'):
-        if embed_type == 'time':
-            return self.t_embed_scale_fc(embed) * x + self.t_embed_add_fc(embed)
-        elif embed_type == 'age':
-            return self.a_embed_scale_fc(embed) * x + self.a_embed_add_fc(embed)
-        else:
-            raise NotImplementedError("Embed type {} not supported".format(embed_type))
-            
 
 class TransformerLayer(nn.Module):
     def __init__(self, config):

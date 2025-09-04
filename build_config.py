@@ -79,6 +79,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Do not use time embedding in the transformer model (default: True)')
     parser.add_argument('--no-age-embed', action='store_false', dest='use_age_embed', default=True,
                         help='Do not use age embedding in the transformer model (default: True)')
+    parser.add_argument('--use-numerical-input', action='store_true', default=False,
+                        help='Use numerical input features (default: False)')
 
     # Training configuration
     parser.add_argument('--learning-rate', type=float, default=0.001,
@@ -109,19 +111,24 @@ def create_argument_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def create_vocab(word_list):
+    vocab_list = [PAD_TOKEN, UNK_TOKEN] + sorted(list(set(word_list)))
+    return {v: k for k, v in enumerate(vocab_list)}
+
+
 def get_config_from_data(data, req_split_group: GROUP_SPLITS=GROUP_SPLITS.TRAIN):
     event_lens = []
     vocab = []
+    token_types = []
     for patient_data in data.values():
         patient_split_group = patient_data.get('split_group', GROUP_SPLITS.TRAIN.value)
 
         if req_split_group == GROUP_SPLITS.ALL or patient_split_group == req_split_group.value:
             event_lens.append(len(patient_data['events']))
             vocab.extend([event['codes'] for event in patient_data['events']])
+            token_types.extend([event['type'] for event in patient_data['events']])
 
-    vocab_list = [PAD_TOKEN, UNK_TOKEN] + sorted(list(set(vocab)))
-    
-    return max(event_lens) if event_lens else 0, {v: k for k, v in enumerate(vocab_list)}
+    return max(event_lens) if event_lens else 0, create_vocab(vocab), create_vocab(token_types)
 
 
 def get_device(device_name):
@@ -161,7 +168,7 @@ def get_data_and_config_from_cmdline() -> Config:
     with open(args.data_dir / f"{args.dataset_name}.json") as f:
         data = json.load(f)
 
-    max_events_length, args.vocab = get_config_from_data(data)
+    max_events_length, args.vocab, args.token_types = get_config_from_data(data)
 
     if args.max_events_length is None:
         args.max_events_length = max_events_length

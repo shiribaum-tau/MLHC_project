@@ -6,7 +6,7 @@
 		"end_of_data": "1900-01-01",
 		"events": [
 			{
-			"type": "DIAG"
+			"type": "ICD10"
 			"value": "A23"
 			"date": "1900-01-01",
 			},

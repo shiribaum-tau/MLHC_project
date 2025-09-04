@@ -1,6 +1,6 @@
 {
-    "hidden_dim": [32, 256],
-    "num_layers": [1, 2, 4],
+    "hidden_dim": [256],
+    "num_layers": [1, 2],
     "use_time_embed": [true],
     "use_age_embed": [true],
     "num_heads": [8, 16, 32],

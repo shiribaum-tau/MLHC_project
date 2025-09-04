@@ -13,6 +13,8 @@ PAD_TOKEN = '<PAD>'
 DATE_FORMAT = "%Y-%m-%d"
 END_OF_TIME = datetime.datetime.max
 
+CATEGORICAL_TYPES = ["ICD10"]
+
 ROOT_DIR = Path(".")
 
 class GROUP_SPLITS(Enum):
@@ -24,6 +26,7 @@ class GROUP_SPLITS(Enum):
 class SUPPORTED_MODELS(Enum):
     MLP = "mlp"
     TRANSFORMER = "transformer"
+    MM_TRANSFORMER = "mm_transformer"
 
 @dataclass()
 class Config:
@@ -31,6 +34,7 @@ class Config:
     
     # Core required fields
     vocab: dict
+    token_types: dict
     dataset_name: str
     data_dir: pathlib.Path
 
@@ -71,6 +75,7 @@ class Config:
     # Embedding configuration
     use_time_embed: bool
     use_age_embed: bool
+    use_numerical_input: bool
 
     # Training configuration
     learning_rate: float
@@ -109,7 +114,7 @@ class Config:
 
 
     def dict(self):
-        excluded_keys = ['vocab', 'device']
+        excluded_keys = ['vocab', 'device', 'token_types']
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
 

@@ -4,7 +4,7 @@ import numpy as np
 import random
 import torch
 
-from consts_and_config import Config, GROUP_SPLITS, PAD_TOKEN, UNK_TOKEN
+from consts_and_config import CATEGORICAL_TYPES, Config, GROUP_SPLITS, PAD_TOKEN, UNK_TOKEN
 from dataset.data_utils import get_avai_trajectory_indices, get_outcome_date, pad_arr, parse_date, process_events
 
 
@@ -94,6 +94,8 @@ class DiseaseProgressionDataset(data.Dataset):
         for sample in samples:
             code_str = " ".join(sample['codes'])
             x = [self.get_index_for_code(code) for code in sample['codes']]
+            types = [self.get_index_for_code(code, token_type=True) for code in sample['types']]
+            is_categorical = [1 if code in CATEGORICAL_TYPES else 0 for code in sample['types']]
 
             # Check if there are any positive patients with y_seq=0
             if sample['y'] and not any(sample['y_seq']):
@@ -104,6 +106,8 @@ class DiseaseProgressionDataset(data.Dataset):
             age_seq = sample['age_seq'].tolist()
             item = {
                 'x': pad_arr(x, self.config.pad_size, 0),
+                'type_seq': pad_arr(types, self.config.pad_size, 0),
+                'is_categorical_seq': pad_arr(is_categorical, self.config.pad_size, 0),
                 'time_seq': pad_arr(time_seq, self.config.pad_size, np.zeros(self.config.time_embed_dim)),
                 'age_seq': pad_arr(age_seq, self.config.pad_size, np.zeros(self.config.time_embed_dim)),
                 # 'code_str': code_str
@@ -114,8 +118,11 @@ class DiseaseProgressionDataset(data.Dataset):
             items.append(item)
         return items
 
-    def get_index_for_code(self, code):
-        return self.config.vocab.get(code, self.config.vocab[UNK_TOKEN])
+    def get_index_for_code(self, code, token_type=False):
+        if token_type:
+            return self.config.token_types.get(code, self.config.token_types[UNK_TOKEN])
+        else:
+            return self.config.vocab.get(code, self.config.vocab[UNK_TOKEN])
 
     def get_trajectory(self, patient):
         """
@@ -131,11 +138,13 @@ class DiseaseProgressionDataset(data.Dataset):
             events_to_date = patient['events'][:idx + 1]
 
             codes = [e['codes'] for e in events_to_date]
+            types = [e['type'] for e in events_to_date]
             _, time_seq = self.get_time_seq(events_to_date, events_to_date[-1]['diag_date'])
             age, age_seq = self.get_time_seq(events_to_date, patient['dob'])
             y, y_seq, y_mask, idx_of_last_y_to_eval, days_to_censor = self.get_label(patient, until_idx=idx)
             samples.append({
                 'codes': codes,
+                'types': types,
                 'y': y,
                 'y_seq': y_seq,
                 'y_mask': y_mask,

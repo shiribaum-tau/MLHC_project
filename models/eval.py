@@ -45,11 +45,11 @@ def compute_metrics(config, results, plot_metrics=False):
     for endpoint_idx, endpoint in enumerate(config.month_endpoints):
         logger.info(f"Processing endpoint {endpoint} (index {endpoint_idx})")
 
-        logger.info("Calling get_probs_and_label")
+        # logger.info("Calling get_probs_and_label")
         probs_for_eval, labels_for_eval = get_probs_and_label(results['probs'], results['idx_of_last_y_to_eval'], results["y"], index=endpoint_idx)
 
         # --- AUC ---
-        logger.info("Computing AUC")
+        # logger.info("Computing AUC")
         try:
             auc_value = roc_auc_score(labels_for_eval, probs_for_eval)
         except Exception as e:
@@ -57,7 +57,7 @@ def compute_metrics(config, results, plot_metrics=False):
             auc_value = None
 
         # --- AUPR ---
-        logger.info("Computing AUPR")
+        # logger.info("Computing AUPR")
         try:
             precisions, recalls, thresholds = precision_recall_curve(labels_for_eval, probs_for_eval, pos_label=1)
             aupr = auc(recalls, precisions)
@@ -67,7 +67,7 @@ def compute_metrics(config, results, plot_metrics=False):
             aupr = None
 
         # --- Best F1 and Threshold ---
-        logger.info("Computing best F1 and threshold")
+        # logger.info("Computing best F1 and threshold")
         if thresholds.size > 0:
             # Compute F1 directly from precision and recall (vectorized)
             with np.errstate(divide='ignore', invalid='ignore'):
@@ -87,7 +87,7 @@ def compute_metrics(config, results, plot_metrics=False):
         metrics[f'precision_at_best_f1_threshold_{endpoint}'] = precision_at_best_f1_threshold
         metrics[f'recall_at_best_f1_threshold_{endpoint}'] = recall_at_best_f1_threshold
 
-        logger.info("Finished computing best F1 and threshold")
+        # logger.info("Finished computing best F1 and threshold")
 
         if plot_metrics:
             logger.info("Computing ROC curve and confusion matrix")

@@ -18,6 +18,7 @@ from build_config import get_data_and_config_from_cmdline
 from models.eval import plot_metrics
 
 from models.mlp import MLP
+from models.mm_transformer import MMTransformer
 from models.model import Model
 from models.transformer import Transformer
 
@@ -33,6 +34,8 @@ def create_model_and_optimizer(config):
         network = MLP(config)
     elif config.model_type == SUPPORTED_MODELS.TRANSFORMER:
         network = Transformer(config)
+    elif config.model_type == SUPPORTED_MODELS.MM_TRANSFORMER:
+        network = MMTransformer(config)
     else:
         raise ValueError(f"Unknown model_type: {config.model_type}")
     network.to(config.device)
