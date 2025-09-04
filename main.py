@@ -97,7 +97,7 @@ def single_run(config, data):
         test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
         test_dataloader = get_dataset_loader(config, test_dataset)
 
-    logging.info(f"Number of patients - Train: {len(train_dataset)}, Dev: {len(val_dataset)}, Test: {len(test_dataset) if config.test else 'N/A'}")
+    logging.info(f"Number of patients - Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset) if config.test else 'N/A'}")
 
     final_out = None
 

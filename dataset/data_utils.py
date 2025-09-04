@@ -89,7 +89,7 @@ def is_valid_trajectory(events_to_date, outcome_date, future_cancer, config: Con
     is_valid_pos = future_cancer and is_pos_pre_cancer and is_pos_in_time_horizon
 
     # Filter (4)
-    is_valid_neg = (not future_cancer) and (months_to_outcome > config.min_followup_for_ctrls_mnths)
+    is_valid_neg = (not future_cancer) and (months_to_outcome >= config.min_followup_for_ctrls_mnths)
     
     y = ((months_to_outcome < last_endpoint) and future_cancer)
     return is_valid_neg or is_valid_pos, y
