@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=tf_reg_decay_0
+#SBATCH --job-name=transformer_overfit
 #SBATCH --account=gpu-research
 #SBATCH --partition=gpu-elbo
 #SBATCH --ntasks=1
@@ -35,4 +35,5 @@ SRUN_ERR="runs/slurm/err/device_used-${SLURMD_NODENAME}-${SLURM_SUBMIT_HOST}-${S
 # # Run the specified Python script
 # srun /home/elhanan/PROGRAMS/conda/envs/evo_model/bin/python ../scripts/"$JOB_NAME" > "$SRUN_OUT" 2> "$SRUN_ERR"
 # lps_females_anonymous   sample_data_formatted
-srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name tf_reg_decay_0 --num-epochs 27 --model-type transformer --dataset-name lps_females_anonymous --device-name gpu --grid-search --grid-search-params param_grids/params_tf_overfit_decay_0.json > "$SRUN_OUT" 2> "$SRUN_ERR"
+srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name bulk_val --dataset-name lps_females_anonymous --device-name gpu --bulk-val --result-dir-for-val runs_no_epochs > "$SRUN_OUT" 2> "$SRUN_ERR"
+# srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name timing_issues --dataset-name sample_data_formatted --device-name gpu --val --train > "$SRUN_OUT" 2> "$SRUN_ERR"

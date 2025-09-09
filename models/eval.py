@@ -8,6 +8,10 @@ import logging
 logger = logging.getLogger("eval")
 logging.getLogger("eval").addHandler(logging.NullHandler())
 
+def _strip_final_num(k: str) -> str:
+    i = k.rfind('_')
+    return k[:i] if i != -1 and k[i+1:].isdigit() else k
+
 def write_to_tb(tb_writer, key, val, global_step):
     if val is not None:
         tb_writer.add_scalar(tag=key, scalar_value=val, global_step=global_step)
@@ -38,15 +42,72 @@ def get_probs_and_label(probs, idx_of_last_y_to_eval, y, index=4):
 
     return probs_for_eval, labels_for_eval
 
+def rr_curve(probs, labels, target=1000, population_size=1_000_000):
+    """
+    Compute RR, precision, recall, and an implied threshold at the *top-k* point
+    corresponding to selecting `target` patients per `population_size`.
+
+    Returns:
+        rr, precision, recall, implied_threshold, n_at_risk_selected
+    """
+    N = labels.size
+    P = int(labels.sum())
+    incidence = labels.mean()
+
+    if N == 0 or P == 0:
+        return None, None, None, None, None  # no data or no positives
+
+    # Sort by predicted risk (descending)
+    order = np.argsort(-probs)
+    sorted_probs = probs[order]
+    sorted_labels = labels[order].astype(np.int64)
+
+    # Exact k for the target-per-population
+    k_target = int(round(target * N / population_size))
+    k_target = max(1, min(N, k_target))  # clip to [1, N]
+
+    # Cumulative TP up to k
+    cumsum_pos = np.cumsum(sorted_labels)
+
+    # RR curve
+    all_ks = np.arange(1, N+1)
+    precision_all_k = cumsum_pos / all_ks
+    rr_all_k = precision_all_k / incidence if incidence > 0 else np.full_like(precision_all_k, np.nan, dtype=float)
+    n_at_risk = all_ks / N * population_size
+
+    if cumsum_pos[-1] == 0:
+        # no positives at all -> nothing to plot
+        rr_all_k_masked = np.full_like(rr_all_k, np.nan, dtype=float)
+    else:
+        mask = cumsum_pos > 0
+        rr_all_k_masked = rr_all_k.astype(float).copy()
+        rr_all_k_masked[~mask] = np.nan
+
+    plot_data = {'n_at_risk': n_at_risk, 'rr': rr_all_k_masked}
+
+    # Compute RR at k
+    TPk = int(cumsum_pos[k_target - 1])
+    precision_k = TPk / k_target
+    recall_k = TPk / P
+    rr_k = (precision_k / incidence) if incidence > 0 else None
+
+    # "Implied threshold" = score of the k-th ranked item
+    # (Note: ties at this value may include >k items if you used >= threshold selection)
+    thr_k = float(sorted_probs[k_target - 1])
+
+    return float(rr_k), float(precision_k), float(recall_k), thr_k, plot_data
+
 
 def compute_metrics(config, results, plot_metrics=False):
     logger.info("Starting compute_metrics")
     metrics = {}
     for endpoint_idx, endpoint in enumerate(config.month_endpoints):
-        logger.info(f"Processing endpoint {endpoint} (index {endpoint_idx})")
+        # logger.info(f"Processing endpoint {endpoint} (index {endpoint_idx})")
 
         # logger.info("Calling get_probs_and_label")
         probs_for_eval, labels_for_eval = get_probs_and_label(results['probs'], results['idx_of_last_y_to_eval'], results["y"], index=endpoint_idx)
+        labels_for_eval = np.array(labels_for_eval)
+        probs_for_eval = np.array(probs_for_eval)
 
         # --- AUC ---
         # logger.info("Computing AUC")
@@ -63,22 +124,21 @@ def compute_metrics(config, results, plot_metrics=False):
             aupr = auc(recalls, precisions)
         except Exception as e:
             logger.warning(f"Failed to compute AUPR for endpoint {endpoint}: {e}")
-            precisions, recalls, thresholds = [], [], []
+            precisions, recalls, thresholds = np.array([]), np.array([]), np.array([])
             aupr = None
 
         # --- Best F1 and Threshold ---
         # logger.info("Computing best F1 and threshold")
-        if thresholds.size > 0:
-            # Compute F1 directly from precision and recall (vectorized)
-            with np.errstate(divide='ignore', invalid='ignore'):
-                f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
-                f1_scores = np.nan_to_num(f1_scores, nan=0.0)  # Replace NaNs from division by zero
+        # Compute F1 directly from precision and recall (vectorized)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
+            f1_scores = np.nan_to_num(f1_scores, nan=0.0)  # Replace NaNs from division by zero
 
-            best_idx = np.argmax(f1_scores)
-            best_f1 = f1_scores[best_idx]
-            best_threshold = thresholds[best_idx] if best_idx < thresholds.size else thresholds[-1]
-            precision_at_best_f1_threshold = precisions[best_idx]
-            recall_at_best_f1_threshold = recalls[best_idx]
+        best_idx = np.argmax(f1_scores[:-1])  # Exclude last point where threshold is inf
+        best_f1 = float(f1_scores[best_idx])
+        best_threshold = float(thresholds[best_idx] if best_idx < thresholds.size else thresholds[-1])
+        precision_at_best_f1_threshold = float(precisions[best_idx])
+        recall_at_best_f1_threshold = float(recalls[best_idx])
 
         metrics[f'auc_{endpoint}'] = auc_value
         metrics[f'aupr_{endpoint}'] = aupr
@@ -86,20 +146,48 @@ def compute_metrics(config, results, plot_metrics=False):
         metrics[f'best_f1_threshold_{endpoint}'] = best_threshold
         metrics[f'precision_at_best_f1_threshold_{endpoint}'] = precision_at_best_f1_threshold
         metrics[f'recall_at_best_f1_threshold_{endpoint}'] = recall_at_best_f1_threshold
-
+        rr_k, precision_k, recall_k, thr_k, plot_data = rr_curve(
+            probs_for_eval, labels_for_eval, target=1000, population_size=1_000_000
+        )
+        metrics[f'precision_at_1000_per_million_{endpoint}'] = precision_k
+        metrics[f'recall_at_1000_per_million_{endpoint}'] = recall_k
+        metrics[f'rr_at_1000_per_million_{endpoint}'] = rr_k
+        metrics[f'threshold_at_1000_per_million_{endpoint}'] = thr_k
         # logger.info("Finished computing best F1 and threshold")
 
         if plot_metrics:
-            logger.info("Computing ROC curve and confusion matrix")
+
+            threshold_to_use = None
+            if config.threshold_method == 'f1':
+                threshold_to_use = best_threshold
+            elif config.threshold_method == 'rr':
+                threshold_to_use = thr_k
+            elif config.threshold_method == 'const':
+                threshold_to_use = config.class_pred_threshold
+            else:
+                raise ValueError(f"Unknown threshold_method: {config.threshold_method}")
+            logger.info(f"Computing ROC curve and confusion matrix. Using {config.threshold_method} ({threshold_to_use}) for thresholding.")
+
             fpr, tpr, _ = roc_curve(labels_for_eval, probs_for_eval, pos_label=1)
-            preds_for_eval = (np.array(probs_for_eval) >= config.class_pred_threshold).astype(int)
+            preds_for_eval = (np.array(probs_for_eval) >= threshold_to_use).astype(int)
             cm = confusion_matrix(labels_for_eval, preds_for_eval)
 
             metrics[f'tpr_{endpoint}'] = tpr
             metrics[f'fpr_{endpoint}'] = fpr
             metrics[f'precisions_{endpoint}'] = precisions
             metrics[f'recalls_{endpoint}'] = recalls
+
             metrics[f'confusion_matrix_{endpoint}'] = cm
+            # Add confusion matrix components
+            tn, fp, fn, tp = cm.ravel()
+            metrics[f'cm_tp_{endpoint}'] = tp
+            metrics[f'cm_fp_{endpoint}'] = fp
+            metrics[f'cm_tn_{endpoint}'] = tn
+            metrics[f'cm_fn_{endpoint}'] = fn
+
+            # Add RR curve
+            metrics[f'n_at_risk_{endpoint}'] = plot_data['n_at_risk']
+            metrics[f'rr_curve_{endpoint}'] = plot_data['rr']
 
         logger.info(f"Finished endpoint {endpoint}")
 
@@ -107,7 +195,7 @@ def compute_metrics(config, results, plot_metrics=False):
     return metrics
 
 
-def plot_metrics(metrics, endpoints, save_dir=None):
+def output_metrics(metrics, endpoints, save_dir=None):
     """
     Plot ROC and PR curves and Confusion matrices for multiple endpoints.
 
@@ -158,24 +246,32 @@ def plot_metrics(metrics, endpoints, save_dir=None):
 
     if save_dir:
         plt.savefig(save_dir / "pr_curves.png", dpi=300)
-
-        results_to_save = []
-        for endpoint in endpoints:
-            results_to_save.append({
-                "Endpoint": endpoint,
-                "AUC": metrics[f'auc_{endpoint}'],
-                "AUPR": metrics[f'aupr_{endpoint}'],
-                "recall": metrics[f'recall_at_best_f1_threshold_{endpoint}'],
-                "precision": metrics[f'precision_at_best_f1_threshold_{endpoint}'],
-                "f1": metrics[f'best_f1_{endpoint}'],
-                "best_f1_threshold": metrics[f'best_f1_threshold_{endpoint}'],
-            })
-        results_df = pd.DataFrame(results_to_save)
-        results_df.to_csv(save_dir / "auc_aupr_results.csv", index=False)
-
     else:
         plt.show()
     plt.close()
+
+    # --- RR Curve ---
+    plt.figure(figsize=(10, 8))
+
+    for i, ep in enumerate(endpoints):
+        x = np.asarray(metrics[f"n_at_risk_{ep}"])
+        y = np.asarray(metrics[f"rr_curve_{ep}"])
+        m = np.isfinite(x) & np.isfinite(y)
+        if np.any(m):
+            plt.plot(x[m], y[m], lw=2, label=endpoint_names[i])
+    plt.xscale('log')
+    plt.axvline(1000, ls='--', color='k', alpha=0.5)
+    plt.xlabel("n at risk (per 1M patients)")
+    plt.ylabel("Relative risk")
+    plt.legend()
+    plt.tight_layout()
+
+    if save_dir:
+        plt.savefig(save_dir / "rr_curves.png", dpi=300)
+    else:
+        plt.show()
+    plt.close()
+
 
     # --- Confusion Matrix ---
     for endpoint_idx, endpoint in enumerate(endpoints):
@@ -191,5 +287,21 @@ def plot_metrics(metrics, endpoints, save_dir=None):
         else:
             plt.show()
         plt.close()
+
+    # Output CSV
+    if save_dir:
+        results_by_endpoint = {e: {"Endpoint": e} for e in endpoints}
+        drop_keys = [
+            'fpr', 'tpr', 'precisions', 'recalls',
+            'confusion_matrix', 'n_at_risk', 'rr_curve'
+        ]
+        for k, v in metrics.items():
+            metric, endpoint = k.rsplit('_', 1)
+            if metric in drop_keys:
+                continue
+            results_by_endpoint[int(endpoint)][metric] = v
+        results_to_save = list(results_by_endpoint.values())
+        results_df = pd.DataFrame(results_to_save)
+        results_df.to_csv(save_dir / "full_results.csv", index=False)
 
     return results_to_save

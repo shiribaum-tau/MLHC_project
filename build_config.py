@@ -22,6 +22,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('--val', action='store_true', default=False, help='Whether or not to run model on val set')
     parser.add_argument('--test', action='store_true', default=False, help='Whether or not to run model on test set')
     parser.add_argument('--grid-search', action='store_true', default=False, help='Whether or not to run grid search')
+    parser.add_argument('--bulk-val', action='store_true', default=False, help='Whether or not to run bulk validation')
 
     # Device and basic configuration
     parser.add_argument('--run-name', type=str, default=None,
@@ -34,8 +35,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Base output directory (default: runs)')
     parser.add_argument('--data-dir', type=str, default=ROOT_DIR / "data",
                         help='Data directory (default: data)')
-    parser.add_argument('--model-to-load', type=str, default=None,
-                        help='Path for model to evaluate when train=False (default: None)')
+    parser.add_argument('--result-dir-for-val', type=str, default=ROOT_DIR / "runs",
+                        help='Directory containing results for bulk validation (default: runs)')
+    parser.add_argument('--model-to-load-dir', type=str, default=None,
+                        help='Path to directory containing model to evaluate when train=False (default: None)')
+    parser.add_argument('--model-to-load-name', type=str, default="val_auc_36_best_model.pt",
+                        help='Filename of the model to load from the model directory (default: "val_auc_36_best_model.pt")')
     parser.add_argument('--grid-search-params', type=str, default=ROOT_DIR / "params.json",
                         help='Path to JSON containing grid search parameters (default: params.json)')
     parser.add_argument('--dataset-name', type=str, required=True,
@@ -73,6 +78,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Number of layers (default: 1)')
     parser.add_argument('--num-heads', type=int, default=8,
                         help='Number of attention heads (default: 8, required for Transformer)')
+    parser.add_argument('--threshold-method', type=str, default='f1', choices=['f1', 'rr', 'const'],
+                        help="Method to use for classification threshold: 'f1', 'rr', or 'const'. If 'const', uses class_pred_threshold.")
+    parser.add_argument('--class-pred-threshold', type=float, default=0.5,
+                        help="Classification threshold to use if --threshold-method is 'const' (default: 0.5)")
 
     # Embedding configuration
     parser.add_argument('--no-time-embed', action='store_false', dest='use_time_embed', default=True,
@@ -147,22 +156,25 @@ def get_data_and_config_from_cmdline() -> Config:
     # Validate num_heads for Transformer
     """Main function to parse command line arguments and return a Config object."""
     parser = create_argument_parser()
+
     args = parser.parse_args()
 
-    # Require model-to-load if train is False
-    if not args.grid_search and (not args.train and not args.model_to_load):
-        parser.error("If --train is False, --model-to-load must be specified.")
+    # Error checking for threshold_method
+    allowed_threshold_methods = {'f1', 'rr', 'const'}
+    if args.threshold_method not in allowed_threshold_methods:
+        parser.error(f"--threshold-method must be one of {allowed_threshold_methods} (got '{args.threshold_method}')")
 
-    args.data_dir = Path(args.data_dir)
-    args.base_output_dir = Path(args.base_output_dir)
+    # Require model-to-load-dir if train is False
+    if not (args.grid_search or args.bulk_val) and (not args.train and not args.model_to_load_dir):
+        parser.error("If --train is False, --model-to-load-dir must be specified.")
 
-    # Validate model selection
-    try:
-        args.model_type = SUPPORTED_MODELS(args.model_type)
-    except ValueError:
-        parser.error(f"Invalid model_type '{args.model_type}'. Allowed values: {[m.value for m in SUPPORTED_MODELS]}")
+    # Require result-dir-for-val if bulk-val is set
+    if args.bulk_val and not args.result_dir_for_val:
+        parser.error("If --bulk-val is set, --result-dir-for-val must be specified.")
 
-    if args.model_type == SUPPORTED_MODELS.TRANSFORMER and args.num_heads is None:
+    # args.data_dir = Path(args.data_dir)
+    # args.base_output_dir = Path(args.base_output_dir)
+    if args.model_type == SUPPORTED_MODELS.TRANSFORMER.name and args.num_heads is None:
         parser.error("--num-heads must be specified when using Transformer model.")
 
     with open(args.data_dir / f"{args.dataset_name}.json") as f:

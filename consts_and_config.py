@@ -43,6 +43,7 @@ class Config:
     val: bool
     test: bool
     grid_search: bool
+    bulk_val: bool
 
     # Device and basic configuration
     run_name: str
@@ -50,9 +51,11 @@ class Config:
     device: torch.device
     random_seed: int
     base_output_dir: pathlib.Path
+    result_dir_for_val: pathlib.Path
     run_dir: pathlib.Path
     start_time: str
-    model_to_load: pathlib.Path
+    model_to_load_dir: pathlib.Path
+    model_to_load_name: str
     grid_search_params: pathlib.Path
 
     # Data preprocessing configuration
@@ -101,7 +104,8 @@ class Config:
     min_delta_earlystopping: float = 0.0
     reduce_lr_patience: int = 5
     lr_decay: float = 0.5
-    class_pred_threshold: float = 0.5
+    threshold_method: str = 'f1'  # Options: 'f1', 'rr', 'const'
+    class_pred_threshold: float = 0.5 # Used if threshold_method == 'const'
 
     # log_dir and out_dir are now properties
     @property
@@ -112,6 +116,25 @@ class Config:
     def out_dir(self):
         return self.run_dir / "out"
 
+    @property
+    def model_to_load(self):
+        if self.model_to_load_dir:
+            return self.model_to_load_dir / self.model_to_load_name
+        return None
+
+    def __post_init__(self):
+        # Convert string arguments to Path where type annotation is pathlib.Path
+        for field in self.__dataclass_fields__.values():
+            if field.type is pathlib.Path:
+                val = getattr(self, field.name)
+                if val is not None and not isinstance(val, pathlib.Path):
+                    setattr(self, field.name, pathlib.Path(val))
+        # Convert string to SUPPORTED_MODELS for model_type
+        if hasattr(self, 'model_type') and not isinstance(self.model_type, SUPPORTED_MODELS):
+            try:
+                self.model_type = SUPPORTED_MODELS(self.model_type)
+            except ValueError:
+                raise ValueError(f"Invalid model_type '{self.model_type}'. Allowed values: {[m.value for m in SUPPORTED_MODELS]}")
 
     def dict(self):
         excluded_keys = ['vocab', 'device', 'token_types']
