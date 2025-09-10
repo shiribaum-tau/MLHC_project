@@ -130,7 +130,7 @@ def get_config_from_data(data, req_split_group: GROUP_SPLITS=GROUP_SPLITS.TRAIN)
     vocab = []
     token_types = []
     for patient_data in data.values():
-        patient_split_group = patient_data.get('split_group', GROUP_SPLITS.TRAIN.value)
+        patient_split_group = patient_data.get('split_group', GROUP_SPLITS.TEST.value)
 
         if req_split_group == GROUP_SPLITS.ALL or patient_split_group == req_split_group.value:
             event_lens.append(len(patient_data['events']))
