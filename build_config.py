@@ -45,10 +45,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Path to JSON containing grid search parameters (default: params.json)')
     parser.add_argument('--dataset-name', type=str, required=True,
                         help='Dataset name (required)')
-    parser.add_argument('--start-at-attendance', action='store_true', default=False,
-                        help='Always include the attendance date in the trajectory (default: False)')
-    parser.add_argument('--no-start-at-attendance', dest='start_at_attendance', action='store_false',
-                        help='Do not include the attendance date in the trajectory')
     parser.add_argument('--target-token', type=str, default='642',
                     help='Target token for prediction (default: "642")')
     parser.add_argument('--model-type', type=str, default=SUPPORTED_MODELS.MLP.value, choices=[m.value for m in SUPPORTED_MODELS], help=f"Model architecture to use (default: {SUPPORTED_MODELS.MLP.value})")
@@ -60,6 +56,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Minimum followup for controls in months (default: 24)')
     parser.add_argument('--exclusion-interval-mnths', type=int, default=0,
                         help='Exclusion interval in months (default: 0)')
+    parser.add_argument('--trajectory-step-by-date', action='store_true', default=False,
+                        help='Step trajectories by date (default: False)')
     
     # Model configuration
     parser.add_argument('--time-embed-dim', type=int, default=12,  # was 128
@@ -68,8 +66,8 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Maximum events length (default: None - automatically set to longest trajectory in training dataset)')
     parser.add_argument('--pad-size', type=int, default=None,
                         help='Pad size for sequences (default: None - automatically set to max_events_length)')
-    parser.add_argument('--hidden-dim', type=int, default=24,  # was 256
-                        help='Hidden dimension (default: 24)')
+    parser.add_argument('--hidden-dim', type=int, default=32,  # was 256
+                        help='Hidden dimension (default: 32)')
     parser.add_argument('--dropout', type=float, default=0,
                         help='Dropout rate (default: 0)')
     parser.add_argument('--pool-name', type=str, default='GlobalAvgPool',
@@ -174,7 +172,8 @@ def get_data_and_config_from_cmdline() -> Config:
 
     # args.data_dir = Path(args.data_dir)
     # args.base_output_dir = Path(args.base_output_dir)
-    if args.model_type == SUPPORTED_MODELS.TRANSFORMER.name and args.num_heads is None:
+    if args.model_type in [SUPPORTED_MODELS.TRANSFORMER.name, SUPPORTED_MODELS.MM_TRANSFORMER.name] \
+            and args.num_heads is None:
         parser.error("--num-heads must be specified when using Transformer model.")
 
     with open(args.data_dir / f"{args.dataset_name}.json") as f:
@@ -195,5 +194,9 @@ def get_data_and_config_from_cmdline() -> Config:
 
     args.run_dir = args.base_output_dir / args.run_name
     args.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # Force trajectory_step_by_date True if mm_transformer is selected
+    if args.model_type == SUPPORTED_MODELS.MM_TRANSFORMER.value:
+        args.trajectory_step_by_date = True
 
     return data, Config(**vars(args))

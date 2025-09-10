@@ -59,7 +59,6 @@ class Config:
     grid_search_params: pathlib.Path
 
     # Data preprocessing configuration
-    start_at_attendance: bool
     min_trajectory_length: int
     min_followup_for_ctrls_mnths: int
     exclusion_interval_mnths: int
@@ -98,6 +97,8 @@ class Config:
     target_token: str # ("C25",)
 
     # Fields with defaults
+    start_at_attendance: bool = False # Unused
+    trajectory_step_by_date: bool = False
     risk_factor_tokens: tuple = None
     month_endpoints: tuple = (3, 6, 12, 36, 60)
     min_delta_checkpoint: float = 0.0

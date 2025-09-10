@@ -112,14 +112,26 @@ def get_avai_trajectory_indices(patient, events, config: Config):
     """
     valid_indices = []
     y = False
-    if config.start_at_attendance:
-        prefix_end = next((i for i, e in enumerate(events) if e["diag_date"] >= patient['attendance_date']), None)
-        if prefix_end is None: # attendance_date is after all events
-            prefix_end = len(events)
-    else:
-        prefix_end = 0
+    # if config.start_at_attendance:
+    #     prefix_end = next((i for i, e in enumerate(events) if e["diag_date"] >= patient['attendance_date']), None)
+    #     if prefix_end is None: # attendance_date is after all events
+    #         prefix_end = len(events)
+    # else:
+    #     prefix_end = 0
+    prefix_end = 0
 
-    for idx in range(prefix_end, len(events)): # idx is the end of the trajectory
+    dates = [e['diag_date'] for e in events]
+    if config.trajectory_step_by_date:
+        # indices of the last occurrence of each consecutive run of the same date
+        indices_to_check = [i for i in range(len(dates))
+                            if i == len(dates) - 1 or dates[i+1] != dates[i]]
+    else:
+        indices_to_check = list(range(len(events)))
+
+    # honor prefix_end
+    indices_to_check = [i for i in indices_to_check if i >= prefix_end]
+
+    for idx in indices_to_check: # idx is the end of the trajectory
         valid, current_y = is_valid_trajectory(events[:idx+1], patient['outcome_date'], patient['future_cancer'], config)
 
         if valid:

@@ -218,3 +218,5 @@ job_files/slurm_default/
 .DS_Store
 overfite_runs/
 runs_no_epochs/
+trash/
+Untitled.ipynb
