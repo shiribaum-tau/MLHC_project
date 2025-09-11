@@ -92,8 +92,8 @@ class DiseaseProgressionDataset(data.Dataset):
         samples = self.get_trajectory(patient)
         items = []
         for sample in samples:
-            code_str = " ".join(sample['codes'])
-            x = [self.get_index_for_code(code) for code in sample['codes']]
+            # code_str = " ".join(sample['codes'])
+            x = [self.get_index_for_code(code) if code_type in CATEGORICAL_TYPES else code for code, code_type in zip(sample['codes'], sample['types'])]
             types = [self.get_index_for_code(code, token_type=True) for code in sample['types']]
             is_categorical = [1 if code in CATEGORICAL_TYPES else 0 for code in sample['types']]
 

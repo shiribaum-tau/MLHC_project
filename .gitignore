@@ -208,15 +208,14 @@ __marimo__/
 
 
 data/olink_individuals_anonymous.json
-out/
-log/
-logs/
-runs/
+runs/slurm/
 data/*.json
 job_files/slurm_default/
 .idea/
 .DS_Store
 overfite_runs/
 runs_no_epochs/
+gridsearch_runs/
 trash/
 Untitled.ipynb
+Epoch_*.pt

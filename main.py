@@ -127,7 +127,7 @@ def single_run(config, data):
 
     logger.info("Training Complete.")
 
-    if config.val:
+    if (config.val or config.test):
         logger.info("Evaluating on validation set using the best model.")
         model = create_model_and_optimizer(config)
 
@@ -141,12 +141,18 @@ def single_run(config, data):
         model.network.load_state_dict(state_dict=saved_checkpoint['network_state_dict'])
         model.optimizer.load_state_dict(state_dict=saved_checkpoint['optimizer_state_dict'])
 
-        _, metrics_full = model.evaluate(val_dataloader, plot_metrics=True)
+        if config.val:
+            _, metrics_full = model.evaluate(val_dataloader, plot_metrics=True)
+        elif config.test:
+            _, metrics_full = model.evaluate(test_dataloader, plot_metrics=True)
+        else:
+            raise ValueError("How did you get here??")
 
         final_out = output_metrics(
             metrics=metrics_full,
             endpoints=config.month_endpoints,
-            save_dir=config.out_dir
+            save_dir=config.out_dir,
+            full_results=config.test
         )
     return final_out
 
@@ -227,7 +233,7 @@ if __name__ == "__main__":
     elif config.bulk_val:
         bulk_val(config, data)
     else:
-        if config.val and not config.train:
+        if (config.val or config.test) and not config.train:
             config = replace_config_for_val(config)
 
         single_run(config, data)

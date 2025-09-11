@@ -77,7 +77,6 @@ class Config:
     # Embedding configuration
     use_time_embed: bool
     use_age_embed: bool
-    use_numerical_input: bool
 
     # Training configuration
     learning_rate: float

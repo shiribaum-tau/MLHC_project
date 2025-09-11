@@ -13,5 +13,5 @@ Best MLP:
     dropout: 0,
     weight_decay: 0,
     hidden_dim: 32,
-    num_layers: 1/4
+    num_layers: 4
 }

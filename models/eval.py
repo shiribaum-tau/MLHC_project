@@ -4,6 +4,7 @@ from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, roc_curv
 import matplotlib.pyplot as plt
 import pandas as pd
 import logging
+import json
 
 logger = logging.getLogger("eval")
 logging.getLogger("eval").addHandler(logging.NullHandler())
@@ -195,7 +196,7 @@ def compute_metrics(config, results, plot_metrics=False):
     return metrics
 
 
-def output_metrics(metrics, endpoints, save_dir=None):
+def output_metrics(metrics, endpoints, save_dir=None, full_results=False):
     """
     Plot ROC and PR curves and Confusion matrices for multiple endpoints.
 
@@ -297,11 +298,15 @@ def output_metrics(metrics, endpoints, save_dir=None):
         ]
         for k, v in metrics.items():
             metric, endpoint = k.rsplit('_', 1)
-            if metric in drop_keys:
+            if metric in drop_keys and not full_results:
                 continue
             results_by_endpoint[int(endpoint)][metric] = v
-        results_to_save = list(results_by_endpoint.values())
-        results_df = pd.DataFrame(results_to_save)
-        results_df.to_csv(save_dir / "full_results.csv", index=False)
+        if full_results:
+            with open(save_dir / "full_results.json", "w") as f:
+                json.dump(metrics, f)
+        else:
+            results_to_save = list(results_by_endpoint.values())
+            results_df = pd.DataFrame(results_to_save)
+            results_df.to_csv(save_dir / "full_results.csv", index=False)
 
     return results_to_save

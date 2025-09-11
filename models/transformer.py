@@ -90,7 +90,6 @@ class TransformerLayer(nn.Module):
 class MultiHeadAttention(nn.Module):
     def __init__(self, config):
         super(MultiHeadAttention, self).__init__()
-        # import ipdb;ipdb.set_trace()
         assert config.hidden_dim % config.num_heads == 0
 
         self.query = nn.Linear(config.hidden_dim, config.hidden_dim)

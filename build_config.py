@@ -6,7 +6,7 @@ import string
 import datetime
 import torch
 from typing import Optional, Union
-from consts_and_config import GROUP_SPLITS, SUPPORTED_MODELS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Config
+from consts_and_config import CATEGORICAL_TYPES, GROUP_SPLITS, SUPPORTED_MODELS, PAD_TOKEN, ROOT_DIR, UNK_TOKEN, Config
 
 
 # config = Config(vocab, max_events_length=max_events_length, pad_size=max_events_length,
@@ -86,8 +86,6 @@ def create_argument_parser() -> argparse.ArgumentParser:
                         help='Do not use time embedding in the transformer model (default: True)')
     parser.add_argument('--no-age-embed', action='store_false', dest='use_age_embed', default=True,
                         help='Do not use age embedding in the transformer model (default: True)')
-    parser.add_argument('--use-numerical-input', action='store_true', default=False,
-                        help='Use numerical input features (default: False)')
 
     # Training configuration
     parser.add_argument('--learning-rate', type=float, default=0.001,
@@ -132,7 +130,7 @@ def get_config_from_data(data, req_split_group: GROUP_SPLITS=GROUP_SPLITS.TRAIN)
 
         if req_split_group == GROUP_SPLITS.ALL or patient_split_group == req_split_group.value:
             event_lens.append(len(patient_data['events']))
-            vocab.extend([event['codes'] for event in patient_data['events']])
+            vocab.extend([event['codes'] for event in patient_data['events'] if event['type'] in CATEGORICAL_TYPES])
             token_types.extend([event['type'] for event in patient_data['events']])
 
     return max(event_lens) if event_lens else 0, create_vocab(vocab), create_vocab(token_types)

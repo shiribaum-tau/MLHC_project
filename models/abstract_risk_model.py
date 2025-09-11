@@ -29,12 +29,12 @@ class AbstractRiskModel(nn.Module):
         self.dropout = nn.Dropout(p=config.dropout)
         self.prob_of_failure_layer = CumulativeProbabilityLayer(config.hidden_dim, len(config.month_endpoints), config)
 
-    def get_embeddings(self, x):
+    def get_embeddings(self, x, batch=None):
         token_embed = self.code_embed(x)
         return token_embed
 
     def forward(self, x, batch=None):
-        embed_x = self.get_embeddings(x)
+        embed_x = self.get_embeddings(x, batch)
 
         seq_hidden = self.encode_trajectory(embed_x, batch)
         seq_hidden = seq_hidden.transpose(1, 2)
