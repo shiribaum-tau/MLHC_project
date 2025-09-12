@@ -1,4 +1,5 @@
 import pickle
+import joblib
 import numpy as np
 import os
 from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, roc_curve, confusion_matrix, f1_score, ConfusionMatrixDisplay
@@ -304,7 +305,7 @@ def output_metrics(metrics, endpoints, save_dir=None, full_results=False):
             results_by_endpoint[int(endpoint)][metric] = v
         if full_results:
             with open(save_dir / "full_results.pkl", "wb") as f:
-                pickle.dump(results_by_endpoint, f, protocol=pickle.HIGHEST_PROTOCOL)
+                joblib.dump(results_by_endpoint, f)
             results_to_save = results_by_endpoint
         else:
             results_to_save = list(results_by_endpoint.values())
