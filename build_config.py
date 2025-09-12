@@ -168,8 +168,6 @@ def get_data_and_config_from_cmdline() -> Config:
     if args.bulk_val and not args.result_dir_for_val:
         parser.error("If --bulk-val is set, --result-dir-for-val must be specified.")
 
-    # args.data_dir = Path(args.data_dir)
-    # args.base_output_dir = Path(args.base_output_dir)
     if args.model_type in [SUPPORTED_MODELS.TRANSFORMER.name, SUPPORTED_MODELS.MM_TRANSFORMER.name] \
             and args.num_heads is None:
         parser.error("--num-heads must be specified when using Transformer model.")
@@ -190,7 +188,8 @@ def get_data_and_config_from_cmdline() -> Config:
     if args.run_name is None:
         args.run_name = args.dataset_name[:10] + ''.join(random.choices(string.ascii_letters + string.digits, k=4))
 
-    args.run_dir = args.base_output_dir / args.run_name
+    args.run_dir = Path(args.base_output_dir) / args.run_name
+    delattr(args, "base_output_dir")
     args.start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # Force trajectory_step_by_date True if mm_transformer is selected

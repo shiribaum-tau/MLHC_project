@@ -1,5 +1,5 @@
 Best Transformer:
-{
+1: {
     dropout: 0,
     weight_decay: 0.0001,
     hidden_dim: 32,
@@ -8,10 +8,26 @@ Best Transformer:
     num_heads: 32,
 }
 
+2: {
+    dropout: 0,
+    weight_decay: 0.0001,
+    hidden_dim: 32,
+    time_embed_dim: 8,
+    num_layers: 4,
+    num_heads: 8,
+}
+
 Best MLP:
-{
+1: {
     dropout: 0,
     weight_decay: 0,
     hidden_dim: 32,
     num_layers: 4
+}
+
+2: {
+    dropout: 0,
+    weight_decay: 0,
+    hidden_dim: 128,
+    num_layers: 8
 }

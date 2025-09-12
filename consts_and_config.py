@@ -50,7 +50,6 @@ class Config:
     device_name: str
     device: torch.device
     random_seed: int
-    base_output_dir: pathlib.Path
     result_dir_for_val: pathlib.Path
     run_dir: pathlib.Path
     start_time: str

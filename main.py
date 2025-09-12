@@ -124,11 +124,10 @@ def single_run(config, data):
     else:
         model_path_to_load = config.model_to_load
 
-
     logger.info("Training Complete.")
 
     if (config.val or config.test):
-        logger.info("Evaluating on validation set using the best model.")
+        logger.info(f"Evaluating on {'validation' if config.val else 'test'} set using the best model.")
         model = create_model_and_optimizer(config)
 
         saved_checkpoint = torch.load(
@@ -157,7 +156,10 @@ def single_run(config, data):
     return final_out
 
 def replace_config_for_val(config: Config) -> Config:
-    excluded_keys = ['run_name', 'run_dir', 'train', 'val', 'test', 'grid_search']
+    excluded_keys = ['dataset_name', 'device_name', 'run_name', 'run_dir',
+                     'train', 'val', 'test', 'grid_search', 'bulk_val', 'data_dir',
+                     'grid_search_params', 'result_dir_for_val', 'model_to_load_dir',
+                     'model_to_load_name', 'random_seed', 'start_time']
     path_to_config = config.model_to_load_dir / "config.json"
     with open(path_to_config, "r") as f:
         config_dict = json.load(f)
