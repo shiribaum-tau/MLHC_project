@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=best_aupr_mlp_bc_all
+#SBATCH --job-name=best_aupr_mlp_bc_all_test
 #SBATCH --account=gpu-research
 #SBATCH --partition=gpu-elbo
 #SBATCH --ntasks=1
@@ -35,4 +35,4 @@ SRUN_ERR="runs/slurm/err/device_used-${SLURMD_NODENAME}-${SLURM_SUBMIT_HOST}-${S
 # # Run the specified Python script
 # srun /home/elhanan/PROGRAMS/conda/envs/evo_model/bin/python ../scripts/"$JOB_NAME" > "$SRUN_OUT" 2> "$SRUN_ERR"
 # lps_females_anonymous   sample_data_formatted lps_individuals_anonymous
-srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name best_aupr_mlp_bc_all --num-epochs 100 --dropout 0 --weight-decay 0 --hidden-dim 128 --num-layers 8 --model-type mlp --dataset-name lps_individuals_anonymous --device-name gpu --train --val > "$SRUN_OUT" 2> "$SRUN_ERR"
+srun /home/elhanan/PROGRAMS/conda/envs/shiri_gpu/bin/python3 main.py --run-name best_aupr_mlp_bc_all_test --num-epochs 100 --dropout 0 --weight-decay 0 --hidden-dim 128 --num-layers 8 --model-type mlp --dataset-name lps_individuals_anonymous --device-name gpu --train --val > "$SRUN_OUT" 2> "$SRUN_ERR"

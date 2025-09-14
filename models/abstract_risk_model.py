@@ -34,6 +34,8 @@ class AbstractRiskModel(nn.Module):
         return token_embed
 
     def forward(self, x, batch=None):
+        assert torch.equal(x, batch['x']), "Something went wrong. x and batch['x'] are not equal"
+
         embed_x = self.get_embeddings(x, batch)
 
         seq_hidden = self.encode_trajectory(embed_x, batch)

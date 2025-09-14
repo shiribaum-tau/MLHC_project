@@ -14,18 +14,37 @@ class MMTransformer(Transformer):
         self.numerical_embed = nn.Linear(1, config.hidden_dim)
 
     def get_embeddings(self, x, batch=None):
-        is_categorical = batch['is_categorical_seq']
-        # Zero all non-categorical values
-        x = is_categorical * x
-        return super().get_embeddings(x.long(), batch)
+        """
+        Zero out non-categorical codes, to get embeddings only for categorical codes.
+        """
+        assert x.dim() == 2, f"x should be (B,T), got {x.shape}"
+        assert batch['is_categorical_seq'].shape == x.shape
+
+        # the code_embed layer only supports longs. Zero out non-categorical codes
+        x_masked = (x * batch['is_categorical_seq']).to(torch.long)
+        return super().get_embeddings(x_masked, batch)
 
     def get_x_embedding_for_transformer(self, embed_x, batch):
-        # embed_x contains the categorical embedding
-        num_emb = self.numerical_embed(batch['x'].float())
-        is_categorical = batch['is_categorical_seq']
-        # Masking: each token gets either code_emb or num_emb
-        embed_x = is_categorical * embed_x + (1 - is_categorical) * num_emb
+        B, T, H = embed_x.shape
+        assert batch['x'].shape == (B, T)
+        assert batch['type_seq'].shape == (B, T)
+        assert batch['is_categorical_seq'].shape == (B, T)
 
+        # Get encoding for type
         type_embed = self.type_embed(batch['type_seq'])
-        embed_x = embed_x + type_embed
-        return self.condition_on_pos_embed(embed_x, batch)
+
+        # embed_x already contains embeddings for categorical codes only
+        # Now get embeddings for numerical codes
+        x_num = batch['x'].float().unsqueeze(-1)   # (B, T, 1)
+        num_emb = self.numerical_embed(x_num)      # (B, T, H)
+
+        # Fuse the two embeddings based on the mask
+        mask = batch['is_categorical_seq'].unsqueeze(-1).to(embed_x.dtype)  # (B, T, 1)
+        fused = mask * embed_x + (1.0 - mask) * num_emb  
+
+        # Incorporate the type embeddings
+        fused = fused + type_embed  # (B, T, H)
+
+        out = self.condition_on_pos_embed(fused, batch)
+        assert out.shape == (B, T, H)
+        return out
