@@ -2,15 +2,15 @@ import os
 
 # Mapping of substrings to new names
 RENAME_MAP = [
-    ("paper_tf", "Paper Transformer.pkl"),
-    ("mm_tf", "Multi-modal Transformer.pkl"),
-    ("tf", "Transformer.pkl"),
-    ("mlp", "MLP.pkl"),
+    ("Paper Transformer.pkl", "Original Transformer.pkl"),
+    # ("mm_tf", "Multi-modal Transformer.pkl"),
+    ("Transformer.pkl", "Our Transformer.pkl"),
+    # ("mlp", "MLP.pkl"),
 ]
 
 def get_new_name(filename):
     for key, new_name in RENAME_MAP:
-        if key in filename:
+        if key == filename:
             return new_name
     return None
 
