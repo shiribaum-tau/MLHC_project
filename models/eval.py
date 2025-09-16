@@ -198,7 +198,7 @@ def compute_metrics(config, results, plot_metrics=False):
     return metrics
 
 
-def output_metrics(metrics, endpoints, save_dir=None, full_results=False):
+def output_metrics(metrics, endpoints, save_dir=None, full_results=False, bootstrap_bootstrap_skip_large_output=False):
     """
     Plot ROC and PR curves and Confusion matrices for multiple endpoints.
 
@@ -304,8 +304,9 @@ def output_metrics(metrics, endpoints, save_dir=None, full_results=False):
                 continue
             results_by_endpoint[int(endpoint)][metric] = v
         if full_results:
-            with open(save_dir / "full_results.pkl", "wb") as f:
-                joblib.dump(results_by_endpoint, f)
+            if not bootstrap_bootstrap_skip_large_output:
+                with open(save_dir / "full_results.pkl", "wb") as f:
+                    joblib.dump(results_by_endpoint, f)
             results_to_save = results_by_endpoint
         else:
             results_to_save = list(results_by_endpoint.values())

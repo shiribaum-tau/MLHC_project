@@ -152,7 +152,8 @@ def single_run(config, data):
             metrics=metrics_full,
             endpoints=config.month_endpoints,
             save_dir=config.out_dir,
-            full_results=config.test
+            full_results=config.test,
+            bootstrap_bootstrap_skip_large_output=config.bootstrap_skip_large_output
         )
     return final_out
 
@@ -208,7 +209,8 @@ def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f
         new_run_name = f"{config.run_name}_{i+1}"
         new_run_dir = config.run_dir / new_run_name
         iter_config = replace(config, random_seed=config.random_seed + i,
-                              run_name=new_run_name, run_dir=new_run_dir)
+                              run_name=new_run_name, run_dir=new_run_dir,
+                              bootstrap_skip_large_output = True)
         out = single_run(iter_config, data)
         for endpoint in out.keys():
             results_in_endpoint = all_results.get(endpoint, {key: [] for key in keys})
@@ -217,7 +219,7 @@ def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f
             all_results[endpoint] = results_in_endpoint
 
         with open(config.run_dir / "bootstrap_test_results.json", "w") as f:
-            json.dump(all_results, f, indent=4, default=str)
+            json.dump(all_results, f, default=str)
         logger.info(f"Bootstrap test results saved to {config.run_dir / 'bootstrap_test_results.json'}")
 
 if __name__ == "__main__":
