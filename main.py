@@ -1,3 +1,4 @@
+from config_utils import diff_configs, replace_config_for_val
 from consts_and_config import GROUP_SPLITS, Config, SUPPORTED_MODELS
 from itertools import product
 import json
@@ -114,7 +115,7 @@ def single_run(config, data):
         test_dataset = DiseaseProgressionDataset(data, config, GROUP_SPLITS.TEST)
         test_dataloader = get_dataset_loader(config, test_dataset)
 
-    logger.info(f"Number of patients - Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataset) if config.test else 'N/A'}")
+    logger.info(f"Number of patients - Train: {len(train_dataset)}, Val: {len(val_dataset)}, Test: {len(test_dataloader.dataset) if config.test else 'N/A'}")
 
     final_out = None
 
@@ -155,32 +156,6 @@ def single_run(config, data):
         )
     return final_out
 
-def replace_config_for_val(config: Config) -> Config:
-    excluded_keys = ['dataset_name', 'device_name', 'run_name', 'run_dir',
-                     'train', 'val', 'test', 'grid_search', 'bulk_val', 'data_dir',
-                     'grid_search_params', 'result_dir_for_val', 'model_to_load_dir',
-                     'model_to_load_name', 'random_seed', 'start_time']
-    path_to_config = config.model_to_load_dir / "config.json"
-    with open(path_to_config, "r") as f:
-        config_dict = json.load(f)
-    # Only keep keys in config_dict that are fields of Config
-    config_fields = set(config.__dataclass_fields__.keys())
-    filtered_config_dict = {k: v for k, v in config_dict.items() if k in config_fields and k not in excluded_keys}
-    alt = [k for k in config_dict.keys() if k not in config_fields]
-    logger.info(f"Keys in loaded config not in Config dataclass and will be ignored: {alt}")
-    config = replace(config, **filtered_config_dict)
-    return config
-
-def diff_configs(base_config, new_config, exclude=['val', 'train', 'test', 'grid_search',
-                                                   'run_name', 'run_dir', 'device_name', 'start_time',
-                                                   'model_to_load_dir', 'grid_search_params', 'num_epochs', 'month_endpoints']):
-    base_d, new_d = base_config.dict(), new_config.dict()
-    return {
-        k: new_d.get(k)
-        for k in base_d.keys()
-        if base_d.get(k) != new_d.get(k) and k not in exclude
-    }
-
 def nunique_safe(s: pd.Series) -> int:
     return s.map(lambda x: tuple(x) if isinstance(x, list) else x).nunique(dropna=False)
 
@@ -215,6 +190,35 @@ def bulk_val(base_config: Config, data):
             json.dump(const_cols, f, indent=4, default=str)
         logger.info(f"Bulk validation results saved to {csv_path}")
 
+def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f1_threshold', 'recall_at_1000_per_million']):
+    if not config.test:
+        raise ValueError("bootstrap_test requires config.test to be True")
+    if not config.bootstrap_repeats or config.bootstrap_repeats < 1:
+        raise ValueError("bootstrap_repeats must be a positive integer")
+
+    out = {}
+    os.makedirs(config.run_dir, exist_ok=True)
+    with open(config.run_dir / "base_config.json", "w") as f:
+        json.dump(config.dict(), f)
+
+    all_results = {}
+    for i in range(config.bootstrap_repeats):
+        logger.info(f"Bootstrap iteration {i+1}/{config.bootstrap_repeats}")
+        # Set a different random seed for each iteration
+        new_run_name = f"{config.run_name}_{i+1}"
+        new_run_dir = config.run_dir / new_run_name
+        iter_config = replace(config, random_seed=config.random_seed + i,
+                              run_name=new_run_name, run_dir=new_run_dir)
+        out = single_run(iter_config, data)
+        for endpoint in out.keys():
+            results_in_endpoint = all_results.get(endpoint, {key: [] for key in keys})
+            for key in keys:
+                results_in_endpoint[key].append(float(out[endpoint][key]))
+            all_results[endpoint] = results_in_endpoint
+
+        with open(config.run_dir / "bootstrap_test_results.json", "w") as f:
+            json.dump(all_results, f, indent=4, default=str)
+        logger.info(f"Bootstrap test results saved to {config.run_dir / 'bootstrap_test_results.json'}")
 
 if __name__ == "__main__":
     logger.info("CUDA: %s", torch.cuda.is_available())
@@ -238,4 +242,7 @@ if __name__ == "__main__":
         if (config.val or config.test) and not config.train:
             config = replace_config_for_val(config)
 
-        single_run(config, data)
+        if config.bootstrap_test:
+            bootstrap_test(config, data)
+        else:
+            single_run(config, data)

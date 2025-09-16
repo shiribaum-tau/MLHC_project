@@ -23,6 +23,10 @@ def create_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument('--test', action='store_true', default=False, help='Whether or not to run model on test set')
     parser.add_argument('--grid-search', action='store_true', default=False, help='Whether or not to run grid search')
     parser.add_argument('--bulk-val', action='store_true', default=False, help='Whether or not to run bulk validation')
+    parser.add_argument('--bootstrap-test', action='store_true', default=False,
+                        help='Enable bootstrap testing (default: False)')
+    parser.add_argument('--subsample-ratio', type=float, default=None,
+                        help='Subsample ratio for bootstrap testing (default: None)')
 
     # Device and basic configuration
     parser.add_argument('--run-name', type=str, default=None,
@@ -195,5 +199,11 @@ def get_data_and_config_from_cmdline() -> Config:
     # Force trajectory_step_by_date True if mm_transformer is selected
     if args.model_type == SUPPORTED_MODELS.MM_TRANSFORMER.value:
         args.trajectory_step_by_date = True
+
+    # Handle bootstrap-test logic
+    if args.bootstrap_test:
+        args.test = True
+        if args.subsample_ratio is None:
+            args.subsample_ratio = 0.8
 
     return data, Config(**vars(args))

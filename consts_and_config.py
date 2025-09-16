@@ -44,6 +44,8 @@ class Config:
     test: bool
     grid_search: bool
     bulk_val: bool
+    bootstrap_test: bool
+    subsample_ratio: float
 
     # Device and basic configuration
     run_name: str
@@ -95,6 +97,7 @@ class Config:
     target_token: str # ("C25",)
 
     # Fields with defaults
+    bootstrap_repeats: int = 20
     start_at_attendance: bool = False # Unused
     trajectory_step_by_date: bool = False
     risk_factor_tokens: tuple = None

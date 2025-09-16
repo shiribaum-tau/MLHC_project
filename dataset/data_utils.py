@@ -23,10 +23,13 @@ def get_dataset_loader(config, data):
     """
     Create a DataLoader for the given dataset.
     Train/Dev/Attribution sets use weighted sampling for balance. Test set uses regular sampling.
+    Args:
+        config (Config): Run configuration.
+        data (Dataset): Object of type DiseaseProgressionDataset.
     """
     # Determine batch size
     batch_size = config.train_batch_size if data.split_group == GROUP_SPLITS.TRAIN else config.eval_batch_size
-    
+
     # Common DataLoader arguments
     common_args = {
         'batch_size': batch_size,
@@ -34,7 +37,7 @@ def get_dataset_loader(config, data):
         'pin_memory': True,
         'collate_fn': concat_collate
     }
-    
+
     # Use weighted sampling for balanced training/validation sets
     if data.split_group != GROUP_SPLITS.TEST:
         sampler = torch.utils.data.sampler.WeightedRandomSampler(
@@ -43,8 +46,15 @@ def get_dataset_loader(config, data):
             replacement=(data.split_group == GROUP_SPLITS.TRAIN)
         )
         return torch.utils.data.DataLoader(data, sampler=sampler, **common_args)
-    
+
     # Use regular sampling for test set
+
+    # Subsample the data if requested (for bootstrapping)
+    if config.subsample_ratio is not None and 0 < config.subsample_ratio < 1.0:
+        num_samples = int(config.subsample_ratio * len(data))
+        indices = torch.randperm(len(data))[:num_samples].tolist()
+        data = torch.utils.data.Subset(data, indices)
+
     return torch.utils.data.DataLoader(
         data, 
         shuffle=True, 
