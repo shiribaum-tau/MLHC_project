@@ -18,7 +18,10 @@ class DiseaseProgressionDataset(data.Dataset):
     def __init__(self, data, config: Config, split_group: GROUP_SPLITS):
         """
             Dataset for survival analysis based on categorical disease history information.
-
+        Args:
+            data (dict): Patient data.
+            config (Config): Configuration object.
+            split_group (GROUP_SPLITS): Data split group.
         Returns:
             torch.utils.data.Dataset
 
@@ -64,7 +67,7 @@ class DiseaseProgressionDataset(data.Dataset):
 
     def calculate_class_weights(self):
         """
-            Calculates the weights used by WeightedRandomSampler for balancing the batches. 
+        Calculates the weights used by WeightedRandomSampler for balancing the batches. 
         """
         ys = [patient['y'] for patient in self.patients]
         label_counts = Counter(ys)
@@ -76,9 +79,21 @@ class DiseaseProgressionDataset(data.Dataset):
 
 
     def __len__(self):
+        """
+        Returns the number of patients in the dataset.
+        Returns:
+            int: Number of patients.
+        """
         return len(self.patients)
 
     def __getitem__(self, index):
+        """
+        Gets the item(s) at the specified index or slice.
+        Args:
+            index (int or slice): Index or slice of patients.
+        Returns:
+            list or dict: List of items for slice, dict for single patient.
+        """
         if isinstance(index, slice):
             # Handle slice objects
             indices = range(*index.indices(len(self.patients)))
@@ -88,6 +103,13 @@ class DiseaseProgressionDataset(data.Dataset):
             return self._get_single_item(index)
     
     def _get_single_item(self, index):
+        """
+        Gets the processed sample(s) for a single patient. Used by getitem.
+        Args:
+            index (int): Index of patient.
+        Returns:
+            list: List of processed trajectory samples for the patient.
+        """
         patient = self.patients[index]
         samples = self.get_trajectory(patient)
         items = []
@@ -119,6 +141,14 @@ class DiseaseProgressionDataset(data.Dataset):
         return items
 
     def get_index_for_code(self, code, token_type=False):
+        """
+        Returns the index for a code or token type from the config vocab, or UNK token if not found.
+        Args:
+            code: Code or token type.
+            token_type (bool): Whether to use token_types dict. Only relevant in the MM transformer.
+        Returns:
+            int: Index for code.
+        """
         if token_type:
             return self.config.token_types.get(code, self.config.token_types[UNK_TOKEN])
         else:
@@ -126,7 +156,12 @@ class DiseaseProgressionDataset(data.Dataset):
 
     def get_trajectory(self, patient):
         """
-            Given a patient, multiple trajectories can be extracted by sampling partial histories.
+        Given a patient, samples multiple trajectories by partial history sampling.
+        Args:
+            patient (dict): Patient data.
+        Returns:
+            list: List of sampled trajectory dicts.
+
         """
         if self.split_group != GROUP_SPLITS.TRAIN:
             selected_idx = [random.choice(patient['avai_indices']) for _ in range(self.config.n_trajectories_per_patient_in_test)]
@@ -161,7 +196,12 @@ class DiseaseProgressionDataset(data.Dataset):
 
     def get_time_seq(self, events, reference_date):
         """
-            Calculates the positional embeddings depending on the time diff from the events and the reference date.
+        Calculates the positional embeddings depending on the time diff from the events and the reference date.
+        Args:
+            events (list): List of event dicts.
+            reference_date (datetime): Reference date for time difference.
+        Returns:
+            (max_delta, np.ndarray): Maximum delta and positional embeddings array.
         """
         deltas = np.array([abs((reference_date - event['diag_date']).days) for event in events])
         multipliers = 2*np.pi / (np.linspace(
@@ -173,7 +213,8 @@ class DiseaseProgressionDataset(data.Dataset):
 
     def get_label(self, patient, until_idx):
         """
-        config:
+        Gets the label step function for a trajectory.
+        Args:
             patient (dict): The patient dictionary which includes all the processed diagnosis events.
             until_idx (int): Specify the end point for the partial trajectory.
 

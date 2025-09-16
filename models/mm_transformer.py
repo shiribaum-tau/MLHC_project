@@ -7,6 +7,10 @@ from models.transformer import Transformer
 
 
 class MMTransformer(Transformer):
+    """
+    Multi-modal Transformer model for handling both categorical and numerical features.
+    Inherits from Transformer and adds type/numerical embeddings.
+    """
     def __init__(self, config):
         super(MMTransformer, self).__init__(config)
         self.n_types = len(config.token_types)
@@ -15,7 +19,12 @@ class MMTransformer(Transformer):
 
     def get_embeddings(self, x, batch=None):
         """
-        Zero out non-categorical codes, to get embeddings only for categorical codes.
+        Returns embeddings for categorical codes only, zeroing out non-categorical codes.
+        Args:
+            x (Tensor): Input codes.
+            batch (dict): Batch data including is_categorical_seq.
+        Returns:
+            Tensor: Embeddings for categorical codes.
         """
         assert x.dim() == 2, f"x should be (B,T), got {x.shape}"
         assert batch['is_categorical_seq'].shape == x.shape
@@ -25,6 +34,9 @@ class MMTransformer(Transformer):
         return super().get_embeddings(x_masked, batch)
 
     def get_x_embedding_for_transformer(self, embed_x, batch):
+        """
+        Fuses categorical and numerical embeddings, adds type embeddings, and applies positional conditioning.
+        """
         B, T, H = embed_x.shape
         assert batch['x'].shape == (B, T)
         assert batch['type_seq'].shape == (B, T)

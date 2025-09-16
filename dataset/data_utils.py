@@ -6,6 +6,14 @@ from consts_and_config import DATE_FORMAT, END_OF_TIME, GROUP_SPLITS, PAD_TOKEN,
 
 
 def concat_collate(batch):
+    """
+    Concatenates all samples in a batch into a single list and applies the default PyTorch collate function.
+    Used to flatten nested batches for DataLoader.
+    Args:
+        batch (list): List of samples (possibly lists themselves).
+    Returns:
+        Collated batch suitable for model input.
+    """
     concat_batch = []
     for sample in batch:
         concat_batch.extend(sample)
@@ -46,10 +54,16 @@ def get_dataset_loader(config, data):
 
 
 def parse_date(date_str, format=DATE_FORMAT):
+    """
+    Parses a date string into a datetime object using the specified format.
+    """
     return datetime.strptime(date_str, format)
 
 
 def pad_arr(arr, max_len, pad_value):
+    """
+    Pads an array to a specified maximum length with a given pad value.
+    """
     return np.array([pad_value] * (max_len - len(arr)) + arr[-max_len:])
 
 
