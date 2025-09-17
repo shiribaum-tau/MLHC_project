@@ -12,6 +12,12 @@ class MMTransformer(Transformer):
     Inherits from Transformer and adds type/numerical embeddings.
     """
     def __init__(self, config):
+        """
+        Initializes the MMTransformer.
+
+        Args:
+            config: Run configuration object.
+        """
         super(MMTransformer, self).__init__(config)
         self.n_types = len(config.token_types)
         self.type_embed = nn.Embedding(self.n_types, config.hidden_dim, padding_idx=0)
@@ -20,9 +26,11 @@ class MMTransformer(Transformer):
     def get_embeddings(self, x, batch=None):
         """
         Returns embeddings for categorical codes only, zeroing out non-categorical codes.
+
         Args:
             x (Tensor): Input codes.
             batch (dict): Batch data including is_categorical_seq.
+
         Returns:
             Tensor: Embeddings for categorical codes.
         """

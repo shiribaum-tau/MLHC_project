@@ -1,4 +1,3 @@
-
 from dataclasses import replace
 import json
 import logging
@@ -15,6 +14,15 @@ logging.getLogger("conf_utils").addHandler(logging.NullHandler())
 
 
 def replace_config_for_val(config: Config) -> Config:
+    """
+    Loads config from file and replaces fields for validation.
+
+    Args:
+        config (Config): Base config.
+
+    Returns:
+        Config: Updated config for validation.
+    """
     excluded_keys = ['dataset_name', 'device_name', 'run_name', 'run_dir', 'bootstrap_test',
                      'bootstrap_repeats', 'subsample_ratio',
                      'train', 'val', 'test', 'grid_search', 'bulk_val', 'data_dir',
@@ -34,6 +42,17 @@ def replace_config_for_val(config: Config) -> Config:
 def diff_configs(base_config, new_config, exclude=['val', 'train', 'test', 'grid_search',
                                                    'run_name', 'run_dir', 'device_name', 'start_time',
                                                    'model_to_load_dir', 'grid_search_params', 'num_epochs', 'month_endpoints']):
+    """
+    Computes the difference between two configs, excluding specified keys.
+
+    Args:
+        base_config (Config): Base config.
+        new_config (Config): New config.
+        exclude (list): Keys to exclude from comparison.
+
+    Returns:
+        dict: Dictionary of differing keys and their new values.
+    """
     base_d, new_d = base_config.dict(), new_config.dict()
     return {
         k: new_d.get(k)

@@ -24,12 +24,18 @@ class GROUP_SPLITS(Enum):
     ALL="all"
 
 class SUPPORTED_MODELS(Enum):
+    """
+    Enum for supported model architectures.
+    """
     MLP = "mlp"
     TRANSFORMER = "transformer"
     MM_TRANSFORMER = "mm_transformer"
 
 @dataclass()
 class Config:
+    """
+    Configuration dataclass for ML experiments.
+    """
     # Required fields (no defaults) - grouped by category
     
     # Core required fields
@@ -121,11 +127,17 @@ class Config:
 
     @property
     def model_to_load(self):
+        """
+        Returns the path to the model to load for validation.
+        """
         if self.model_to_load_dir:
             return self.model_to_load_dir / self.model_to_load_name
         return None
 
     def __post_init__(self):
+        """
+        Post-initialization to convert string arguments to Path and model_type to SUPPORTED_MODELS.
+        """
         # Convert string arguments to Path where type annotation is pathlib.Path
         for field in self.__dataclass_fields__.values():
             if field.type is pathlib.Path:
@@ -140,6 +152,12 @@ class Config:
                 raise ValueError(f"Invalid model_type '{self.model_type}'. Allowed values: {[m.value for m in SUPPORTED_MODELS]}")
 
     def dict(self):
+        """
+        Returns a dictionary representation of the config, excluding certain keys.
+
+        Returns:
+            dict: Dictionary of config parameters.
+        """
         excluded_keys = ['vocab', 'device', 'token_types']
         full_dict = asdict(self)
         ret = {k: v for k, v in full_dict.items() if k not in excluded_keys}
@@ -153,11 +171,17 @@ class Config:
         return ret
 
     def __repr__(self):
+        """
+        Returns a string representation of the config for debugging.
+        """
         config_dict = self.dict()
         params = ', '.join(f'{k}={repr(v)}' for k, v in config_dict.items())
         return f"Config({params})"
 
     def __str__(self):
+        """
+        Returns a formatted string of the config for display.
+        """
         config_dict = self.dict()
         params = '\n  '.join(f'{k}: {v}' for k, v in config_dict.items())
         return f"Config:\n  {params}"

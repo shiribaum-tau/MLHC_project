@@ -30,10 +30,32 @@ class AbstractRiskModel(nn.Module):
         self.prob_of_failure_layer = CumulativeProbabilityLayer(config.hidden_dim, len(config.month_endpoints), config)
 
     def get_embeddings(self, x, batch=None):
+        """
+        Returns token embeddings for input x.
+
+        Args:
+            x (Tensor): Input tensor.
+            batch (dict, optional): Batch data.
+
+        Returns:
+            Tensor: Token embeddings.
+        """
+
         token_embed = self.code_embed(x)
         return token_embed
 
     def forward(self, x, batch=None):
+        """
+        Forward pass for risk prediction.
+
+        Args:
+            x (Tensor): Input tensor.
+            batch (dict, optional): Batch data.
+
+        Returns:
+            Tensor: Logits for risk prediction.
+        """
+
         assert torch.equal(x, batch['x']), "Something went wrong. x and batch['x'] are not equal"
 
         embed_x = self.get_embeddings(x, batch)

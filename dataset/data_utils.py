@@ -11,6 +11,7 @@ def concat_collate(batch):
     Used to flatten nested batches for DataLoader.
     Args:
         batch (list): List of samples (possibly lists themselves).
+
     Returns:
         Collated batch suitable for model input.
     """
@@ -26,6 +27,9 @@ def get_dataset_loader(config, data):
     Args:
         config (Config): Run configuration.
         data (Dataset): Object of type DiseaseProgressionDataset.
+
+    Returns:
+        DataLoader: PyTorch DataLoader for the dataset.
     """
     # Determine batch size
     batch_size = config.train_batch_size if data.split_group == GROUP_SPLITS.TRAIN else config.eval_batch_size

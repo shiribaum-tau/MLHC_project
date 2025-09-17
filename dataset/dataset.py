@@ -22,9 +22,6 @@ class DiseaseProgressionDataset(data.Dataset):
             data (dict): Patient data.
             config (Config): Configuration object.
             split_group (GROUP_SPLITS): Data split group.
-        Returns:
-            torch.utils.data.Dataset
-
         """
         super(DiseaseProgressionDataset, self).__init__()
         self.config = config
@@ -81,6 +78,7 @@ class DiseaseProgressionDataset(data.Dataset):
     def __len__(self):
         """
         Returns the number of patients in the dataset.
+
         Returns:
             int: Number of patients.
         """
@@ -89,8 +87,10 @@ class DiseaseProgressionDataset(data.Dataset):
     def __getitem__(self, index):
         """
         Gets the item(s) at the specified index or slice.
+
         Args:
             index (int or slice): Index or slice of patients.
+
         Returns:
             list or dict: List of items for slice, dict for single patient.
         """
@@ -105,8 +105,10 @@ class DiseaseProgressionDataset(data.Dataset):
     def _get_single_item(self, index):
         """
         Gets the processed sample(s) for a single patient. Used by getitem.
+
         Args:
             index (int): Index of patient.
+
         Returns:
             list: List of processed trajectory samples for the patient.
         """
@@ -143,9 +145,11 @@ class DiseaseProgressionDataset(data.Dataset):
     def get_index_for_code(self, code, token_type=False):
         """
         Returns the index for a code or token type from the config vocab, or UNK token if not found.
+
         Args:
             code: Code or token type.
             token_type (bool): Whether to use token_types dict. Only relevant in the MM transformer.
+
         Returns:
             int: Index for code.
         """
@@ -157,11 +161,12 @@ class DiseaseProgressionDataset(data.Dataset):
     def get_trajectory(self, patient):
         """
         Given a patient, samples multiple trajectories by partial history sampling.
+
         Args:
             patient (dict): Patient data.
+
         Returns:
             list: List of sampled trajectory dicts.
-
         """
         if self.split_group != GROUP_SPLITS.TRAIN:
             selected_idx = [random.choice(patient['avai_indices']) for _ in range(self.config.n_trajectories_per_patient_in_test)]
@@ -197,9 +202,11 @@ class DiseaseProgressionDataset(data.Dataset):
     def get_time_seq(self, events, reference_date):
         """
         Calculates the positional embeddings depending on the time diff from the events and the reference date.
+
         Args:
             events (list): List of event dicts.
             reference_date (datetime): Reference date for time difference.
+
         Returns:
             (max_delta, np.ndarray): Maximum delta and positional embeddings array.
         """
@@ -214,6 +221,7 @@ class DiseaseProgressionDataset(data.Dataset):
     def get_label(self, patient, until_idx):
         """
         Gets the label step function for a trajectory.
+
         Args:
             patient (dict): The patient dictionary which includes all the processed diagnosis events.
             until_idx (int): Specify the end point for the partial trajectory.
@@ -230,12 +238,12 @@ class DiseaseProgressionDataset(data.Dataset):
 
             Ex1:  A partial disease trajectory that includes pancreatic cancer diagnosis between 6-12 months
                   after time of assessment.
-                    idx_of_last_y_to_eval: 2
+                    idx_of_last_y_to_evaluate: 2
                     y_seq: [0, 0, 1, 1, 1]
                     y_mask: [1, 1, 1, 0, 0]
             Ex2:  A partial disease trajectory from a patient who never gets pancreatic cancer diagnosis
                   but died between 36-60 months after time of assessment.
-                    idx_of_last_y_to_eval: 1
+                    idx_of_last_y_to_evaluate: 1
                     y_seq: [0, 0, 0, 0, 0]
                     y_mask: [1, 1, 1, 1, 0]
         """

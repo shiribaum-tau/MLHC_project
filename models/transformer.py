@@ -8,6 +8,12 @@ from models.abstract_risk_model import AbstractRiskModel
 
 class Transformer(AbstractRiskModel):
     def __init__(self, config):
+        """
+        Initializes the Transformer model.
+
+        Args:
+            config: Configuration object.
+        """
         super(Transformer, self).__init__(config)
         self.num_layers = config.num_layers
         self.hidden_dim = config.hidden_dim
@@ -36,6 +42,16 @@ class Transformer(AbstractRiskModel):
     #         raise NotImplementedError("Embed type {} not supported".format(embed_type))
 
     def condition_on_pos_embed(self, embed_x, batch):
+        """
+        Applies positional conditioning to embeddings using time and/or age embeddings.
+
+        Args:
+            embed_x (Tensor): Input embeddings.
+            batch (dict): Batch data.
+
+        Returns:
+            Tensor: Conditioned embeddings.
+        """
         if self.use_time_embed:
             time = batch['time_seq'].float()
             # embed_x = self.condition_on_pos_embed(embed_x, time, 'time')
@@ -49,14 +65,28 @@ class Transformer(AbstractRiskModel):
         return embed_x
 
     def get_x_embedding_for_transformer(self, embed_x, batch):
+        """
+        Returns the input embeddings for the transformer.
+
+        Args:
+            embed_x (Tensor): Input embeddings.
+            batch (dict): Batch data.
+
+        Returns:
+            Tensor: Embeddings for transformer input.
+        """
         return self.condition_on_pos_embed(embed_x, batch)
 
     def encode_trajectory(self, embed_x, batch=None):
         """
-            Computes a forward pass of the model.
+        Computes a forward pass of the model.
 
-            Returns:
-                The result of feeding the input through the model.
+        Args:
+            embed_x (Tensor): Input embeddings.
+            batch (dict, optional): Batch data.
+
+        Returns:
+            Tensor: Encoded trajectory.
         """
         embed_x = self.get_x_embedding_for_transformer(embed_x, batch)
 

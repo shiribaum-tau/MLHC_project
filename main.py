@@ -34,6 +34,15 @@ logger = logging.getLogger("main")
 logging.getLogger("main").addHandler(logging.NullHandler())
 
 def make_unique_dir(base_dir):
+    """
+    Creates a unique directory, appending a number if the base directory exists.
+
+    Args:
+        base_dir (str or Path): Base directory path.
+
+    Returns:
+        str: Path to the created directory.
+    """
     base_dir = str(base_dir)
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
@@ -48,6 +57,15 @@ def make_unique_dir(base_dir):
         i += 1
 
 def create_model_and_optimizer(config):
+    """
+    Creates the model and optimizer based on the configuration.
+
+    Args:
+        config (Config): Configuration object.
+
+    Returns:
+        Model: Model wrapper object.
+    """
     if config.model_type == SUPPORTED_MODELS.MLP:
         network = MLP(config)
     elif config.model_type == SUPPORTED_MODELS.TRANSFORMER:
@@ -63,7 +81,14 @@ def create_model_and_optimizer(config):
     return model
 
 def grid_search(param_grid, base_config: Config, data):
+    """
+    Runs grid search over the parameter grid.
 
+    Args:
+        param_grid (dict): Parameter grid.
+        base_config (Config): Base configuration.
+        data (dict): Dataset.
+    """
     os.makedirs(base_config.run_dir, exist_ok=True)
     with open(base_config.run_dir / "base_config.json", "w") as f:
         json.dump(base_config.dict(), f)
@@ -92,6 +117,16 @@ def grid_search(param_grid, base_config: Config, data):
     
 
 def single_run(config, data):
+    """
+    Runs a single experiment (train/eval/test).
+
+    Args:
+        config (Config): Configuration object.
+        data (dict): Dataset.
+
+    Returns:
+        dict or list: Output metrics.
+    """
     # Set Random Seed
     random.seed(config.random_seed)
     np.random.seed(config.random_seed)
@@ -158,9 +193,25 @@ def single_run(config, data):
     return final_out
 
 def nunique_safe(s: pd.Series) -> int:
+    """
+    Computes the number of unique values in a pandas Series, handling lists.
+
+    Args:
+        s (pd.Series): Input series.
+
+    Returns:
+        int: Number of unique values.
+    """
     return s.map(lambda x: tuple(x) if isinstance(x, list) else x).nunique(dropna=False)
 
 def bulk_val(base_config: Config, data):
+    """
+    Runs bulk validation over multiple result directories.
+
+    Args:
+        base_config (Config): Base configuration.
+        data (dict): Dataset.
+    """
     os.makedirs(base_config.run_dir, exist_ok=True)
     # with open(base_config.run_dir / "base_config.json", "w") as f:
     #     json.dump(base_config.dict(), f)
@@ -192,6 +243,14 @@ def bulk_val(base_config: Config, data):
         logger.info(f"Bulk validation results saved to {csv_path}")
 
 def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f1_threshold', 'rr_at_1000_per_million']):
+    """
+    Runs bootstrap testing for model evaluation.
+
+    Args:
+        config (Config): Configuration object.
+        data (dict): Dataset.
+        keys (list): Metrics keys to collect.
+    """
     if not config.test:
         raise ValueError("bootstrap_test requires config.test to be True")
     if not config.bootstrap_repeats or config.bootstrap_repeats < 1:

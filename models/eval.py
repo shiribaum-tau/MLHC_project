@@ -12,14 +12,30 @@ logger = logging.getLogger("eval")
 logging.getLogger("eval").addHandler(logging.NullHandler())
 
 def _strip_final_num(k: str) -> str:
+    """
+    Removes the final underscore and number from a string if present.
+    """
     i = k.rfind('_')
     return k[:i] if i != -1 and k[i+1:].isdigit() else k
 
 def write_to_tb(tb_writer, key, val, global_step):
+    """
+    Writes a scalar value to TensorBoard.
+    """
     if val is not None:
         tb_writer.add_scalar(tag=key, scalar_value=val, global_step=global_step)
 
 def append_to_dict(origin_dict, to_append):
+    """
+    Appends values from to_append dict to origin_dict lists.
+
+    Args:
+        origin_dict (dict): Original dictionary.
+        to_append (dict): Dictionary to append.
+
+    Returns:
+        dict: Combined dictionary.
+    """
     result = {}
     for key in origin_dict.keys() | to_append.keys():
         original_value = origin_dict.get(key, [])
@@ -28,6 +44,15 @@ def append_to_dict(origin_dict, to_append):
     return result
 
 def mean_dict_values(data):
+    """
+    Computes mean of list values in a dictionary.
+
+    Args:
+        data (dict): Input dictionary.
+
+    Returns:
+        dict: Dictionary with mean values.
+    """
     return {
         k: np.mean(v) if isinstance(v, list) else v
         for k, v in data.items()
@@ -51,7 +76,7 @@ def rr_curve(probs, labels, target=1000, population_size=1_000_000):
     corresponding to selecting `target` patients per `population_size`.
 
     Returns:
-        rr, precision, recall, implied_threshold, n_at_risk_selected
+        tuple: (rr, precision, recall, implied_threshold, n_at_risk_selected)
     """
     N = labels.size
     P = int(labels.sum())
@@ -102,6 +127,17 @@ def rr_curve(probs, labels, target=1000, population_size=1_000_000):
 
 
 def compute_metrics(config, results, plot_metrics=False):
+    """
+    Computes evaluation metrics for each endpoint.
+
+    Args:
+        config: Configuration object.
+        results (dict): Results dictionary.
+        plot_metrics (bool): Whether to compute metrics for plotting.
+
+    Returns:
+        dict: Metrics for each endpoint.
+    """
     logger.info("Starting compute_metrics")
     metrics = {}
     for endpoint_idx, endpoint in enumerate(config.month_endpoints):
@@ -209,8 +245,14 @@ def output_metrics(metrics, endpoints, save_dir=None, full_results=False, bootst
         Names for each endpoint. Defaults to ["Endpoint 1", "Endpoint 2", ...].
     save_dir : str, optional
         Directory to save the plots. If None, plots are just shown.
-    """
+    full_results : bool, optional
+        Whether to save full results.
+    bootstrap_bootstrap_skip_large_output : bool, optional
+        Whether to skip saving large output in bootstrap mode.
 
+    Returns:
+        dict or list: Results saved.
+    """
     endpoint_names = [f"{i} Months" for i in endpoints]
     logging.info(f"Writing ROC and PR curves to {save_dir}")
 

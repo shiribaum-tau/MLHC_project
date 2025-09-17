@@ -13,6 +13,14 @@ class CumulativeProbabilityLayer(nn.Module):
         The cumulative layer which defines the monotonically increasing risk scores.
     """
     def __init__(self, num_features, max_followup, args):
+        """
+        Initializes the CumulativeProbabilityLayer.
+
+        Args:
+            num_features (int): Number of input features.
+            max_followup (int): Maximum follow-up time steps.
+            args: Run config.
+        """
         super(CumulativeProbabilityLayer, self).__init__()
         self.args = args
         self.hazard_fc = nn.Linear(num_features,  max_followup)
@@ -24,11 +32,29 @@ class CumulativeProbabilityLayer(nn.Module):
         self.register_parameter('upper_triagular_mask', mask)
 
     def hazards(self, x):
+        """
+        Computes the positive hazard values for input x.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            Tensor: Positive hazard values.
+        """
         raw_hazard = self.hazard_fc(x)
         pos_hazard = self.relu(raw_hazard)
         return pos_hazard
 
     def forward(self, x):
+        """
+        Forward pass for cumulative probability computation.
+
+        Args:
+            x (Tensor): Input tensor.
+
+        Returns:
+            Tensor: Cumulative probability tensor.
+        """
         hazards = self.hazards(x)
         B, T = hazards.size()  # hazards is (B, T)
         expanded_hazards = hazards.unsqueeze(-1).expand(B, T, T)  # expanded_hazards is (B,T, T)
@@ -57,6 +83,15 @@ class EarlyStopper:
         self.counter = 0
 
     def early_stop(self, curr_metric_value):
+        """
+        Determines whether training should be stopped early based on the monitored metric.
+
+        Args:
+            curr_metric_value (float): Current value of the monitored metric.
+
+        Returns:
+            bool: True if training should be stopped, False otherwise.
+        """
         if self.mode == 'min':
             if curr_metric_value < self.best_value - self.min_delta:
                 self.best_value = curr_metric_value
@@ -175,9 +210,16 @@ class ReduceLROnPlateau:
 
     def step(self, current_value, epoch_id, network):
         """
-        Called at the end of each epoch.
-        """
+        Called at the end of each epoch. Checks for improvement and reduces learning rate if needed.
 
+        Args:
+            current_value (float): Current value of the monitored metric.
+            epoch_id (int): Current epoch number.
+            network (torch.nn.Module): Model network.
+
+        Returns:
+            float: Current learning rate.
+        """
         if self.is_improved(current_value, self.best_value):
             # Update best value
             self.best_value = current_value

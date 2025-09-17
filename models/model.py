@@ -20,11 +20,29 @@ logging.getLogger("model").addHandler(logging.NullHandler())
 class Model:
     def __init__(self, network: nn.Module, optimizer: torch.optim.Optimizer,
                  config: Config):
+        """
+        Initializes the Model wrapper.
+
+        Args:
+            network (nn.Module): Model network.
+            optimizer (torch.optim.Optimizer): Optimizer.
+            config (Config): Configuration object.
+        """
         self.network = network
         self.optimizer = optimizer
         self.config = config
 
     def get_model_loss(self, logits, batch):
+        """
+        Computes the model loss using binary cross-entropy with masking.
+
+        Args:
+            logits (Tensor): Model logits.
+            batch (dict): Batch data.
+
+        Returns:
+            Tensor: Loss value.
+        """
         y_seq = batch['y_seq']
         y_mask = batch['y_mask']
         loss = F.binary_cross_entropy_with_logits(logits, y_seq.float(), weight=y_mask.float(), reduction='sum')\
@@ -33,6 +51,17 @@ class Model:
 
 
     def evaluate(self, dataloader, n_batches=None, plot_metrics=False):
+        """
+        Evaluates the model on the given dataloader.
+
+        Args:
+            dataloader (DataLoader): DataLoader to evaluate.
+            n_batches (int, optional): Number of batches to evaluate.
+            plot_metrics (bool): Whether to plot metrics.
+
+        Returns:
+            tuple: (mean loss, metrics dict)
+        """
         self.network.eval()
         total_loss = []
         results_for_eval = {}
@@ -69,6 +98,16 @@ class Model:
 
     def train(self, train_dataloader: torch.utils.data.DataLoader,
               val_dataloader: typing.Optional[torch.utils.data.DataLoader]):
+        """
+        Trains the model.
+
+        Args:
+            train_dataloader (DataLoader): Training DataLoader.
+            val_dataloader (DataLoader, optional): Validation DataLoader.
+
+        Returns:
+            Path: Path to the best model file.
+        """
         self.optimizer.zero_grad()
 
         self.network.train()

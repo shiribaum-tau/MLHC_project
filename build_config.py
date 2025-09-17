@@ -13,7 +13,12 @@ from consts_and_config import CATEGORICAL_TYPES, GROUP_SPLITS, SUPPORTED_MODELS,
     # #                 time_embed_dim=12, hidden_dim=24, n_trajectories_per_patient_in_test=10,
     # #                 min_trajectory_length=3, num_workers=0)
 def create_argument_parser() -> argparse.ArgumentParser:
-    """Create and configure the argument parser for Config parameters."""
+    """
+    Create and configure the argument parser for Config parameters.
+
+    Returns:
+        argparse.ArgumentParser: Configured argument parser.
+    """
 
     parser = argparse.ArgumentParser(description='Healthcare ML Configuration Parser')
 
@@ -121,11 +126,30 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
 
 def create_vocab(word_list):
+    """
+    Creates a vocabulary dictionary from a list of words.
+
+    Args:
+        word_list (list): List of words.
+
+    Returns:
+        dict: Mapping from word to index.
+    """
     vocab_list = [PAD_TOKEN, UNK_TOKEN] + sorted(list(set(word_list)))
     return {v: k for k, v in enumerate(vocab_list)}
 
 
 def get_config_from_data(data, req_split_group: GROUP_SPLITS=GROUP_SPLITS.TRAIN):
+    """
+    Extracts configuration parameters from the dataset.
+
+    Args:
+        data (dict): Patient data.
+        req_split_group (GROUP_SPLITS): Required split group.
+
+    Returns:
+        tuple: (max_events_length, vocab, token_types)
+    """
     event_lens = []
     vocab = []
     token_types = []
@@ -141,6 +165,15 @@ def get_config_from_data(data, req_split_group: GROUP_SPLITS=GROUP_SPLITS.TRAIN)
 
 
 def get_device(device_name):
+    """
+    Returns the appropriate torch device based on device_name.
+
+    Args:
+        device_name (str): Name of the device.
+
+    Returns:
+        torch.device: Torch device object.
+    """
     if device_name == 'gpu' and torch.backends.mps.is_available() and torch.backends.mps.is_built():
         device = torch.device('mps')
     elif device_name == 'gpu' and torch.cuda.is_available():
@@ -153,8 +186,13 @@ def get_device(device_name):
 
 
 def get_data_and_config_from_cmdline() -> Config:
+    """
+    Main function to parse command line arguments and return a Config object.
+
+    Returns:
+        tuple: (data, Config)
+    """
     # Validate num_heads for Transformer
-    """Main function to parse command line arguments and return a Config object."""
     parser = create_argument_parser()
 
     args = parser.parse_args()
