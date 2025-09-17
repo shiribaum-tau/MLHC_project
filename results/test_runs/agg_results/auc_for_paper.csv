@@ -1,0 +1,6 @@
+,MLP,Paper Transformer,Transformer,Multi-modal Transformer
+Breast Cancer (Females),0.584,0.627,0.617,0.611
+Breast Cancer (All),0.729,0.755,0.731,0.785
+Pancreatic Cancer,0.556,0.671,0.665,0.718
+Skin Cancer,0.681,0.709,0.702,0.724
+Type 2 Diabetes,0.812,0.82,0.82,0.891

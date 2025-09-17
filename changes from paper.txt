@@ -1,2 +1,0 @@
-changes from paper:
-* in get_trajectory, I have made the sampling of test/dev always random.
