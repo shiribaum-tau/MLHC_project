@@ -191,7 +191,7 @@ def bulk_val(base_config: Config, data):
             json.dump(const_cols, f, indent=4, default=str)
         logger.info(f"Bulk validation results saved to {csv_path}")
 
-def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f1_threshold', 'recall_at_1000_per_million']):
+def bootstrap_test(config: Config, data, keys=['auc', 'aupr', 'best_f1', 'best_f1_threshold', 'rr_at_1000_per_million']):
     if not config.test:
         raise ValueError("bootstrap_test requires config.test to be True")
     if not config.bootstrap_repeats or config.bootstrap_repeats < 1:

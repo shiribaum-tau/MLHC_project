@@ -219,3 +219,7 @@ gridsearch_runs/
 trash/
 Untitled.ipynb
 Epoch_*.pt
+bootstrap_test_runs/*/*bootstrap_*/
+bootstrap_test_runs/*/*test_*/
+bootstrap_test_runs/*/*all_*/
+*slurm_default*

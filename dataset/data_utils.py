@@ -52,7 +52,7 @@ def get_dataset_loader(config, data):
     # Subsample the data if requested (for bootstrapping)
     if config.subsample_ratio is not None and 0 < config.subsample_ratio < 1.0:
         num_samples = int(config.subsample_ratio * len(data))
-        indices = torch.randperm(len(data))[:num_samples].tolist()
+        indices = torch.randint(0, len(data), (num_samples,))
         data = torch.utils.data.Subset(data, indices)
 
     return torch.utils.data.DataLoader(

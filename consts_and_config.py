@@ -98,7 +98,7 @@ class Config:
 
     # Fields with defaults
     bootstrap_skip_large_output: bool = False
-    bootstrap_repeats: int = 50
+    bootstrap_repeats: int = 100
     start_at_attendance: bool = False # Unused
     trajectory_step_by_date: bool = False
     risk_factor_tokens: tuple = None
