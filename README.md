@@ -7,7 +7,7 @@ This repository analyzes UK Biobank data to predict cancer risk based on patient
 
 - **data_preprocessing/**: Jupyter notebooks documenting the data preprocessing pipeline, the generation of anonymized JSON files, and subsequent data analysis. These notebooks were executed within the approved lab cluster and are not integrated into the project’s main environment, due to data privacy restrictions.
 - **dataset/**: Data loading, preprocessing, and PyTorch dataset logic for patient trajectories.
-- **param_grid/**: Parameter grids used in the experiments.
+- **param_grids/**: Parameter grids used in the experiments.
 - **models/**: Model architectures (MLP, Transformer, Multi-modal Transformer), pooling layers, training utilities, and evaluation code.
 - **results/**: Stores outputs from experiments, including test results, bootstrapping runs, plots, and aggregated summaries.
 - **config_utils.py, build_config.py, consts_and_config.py**: Configuration management, argument parsing, and core constants/enums.
